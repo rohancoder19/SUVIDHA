@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
@@ -20,16 +22,32 @@ const Feedback = require('./models/Feedback');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Rate Limiting for Auth endpoints to prevent brute-force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 auth requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'TOO_MANY_REQUESTS', message: 'Too many authentication attempts. Please try again after 15 minutes.' }
+  }
+});
+
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Serve static upload attachments
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
-app.use('/api/auth', authRoutes);
+// Routes with rate limiting on Auth
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/schemes', schemeRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/chatbot', chatbotRoutes);
@@ -76,7 +94,7 @@ app.get('/api/admin/analytics', async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
-    service: 'SUVIDHA 2.0 Express Backend API',
+    service: 'SUVIDHA 2.0 Auth-Protected Express API',
     port: PORT,
     dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
@@ -169,6 +187,6 @@ const connectDB = async () => {
 
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 SUVIDHA 2.0 Express Backend API Server listening on port ${PORT}`);
+    console.log(`🚀 SUVIDHA 2.0 Auth-Protected Express API Server listening on port ${PORT}`);
   });
 });

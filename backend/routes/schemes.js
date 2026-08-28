@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const Scheme = require('../models/Scheme');
+const { auth } = require('../middleware/auth');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
 
 // @route   GET /api/schemes
-// @desc    Get list of schemes with filtering, pagination & search
-router.get('/', async (req, res) => {
+// @desc    Get list of schemes with filtering, pagination & search (Requires Auth)
+router.get('/', auth, async (req, res) => {
   try {
     const { state, district, level, category, search, page = 1, limit = 20 } = req.query;
     let query = { status: { $ne: 'Archived' } };
@@ -56,10 +57,10 @@ router.get('/', async (req, res) => {
 });
 
 // @route   POST /api/schemes/compare
-// @desc    Get side-by-side comparison data for 2 to 4 schemes by slug or id
-router.post('/compare', async (req, res) => {
+// @desc    Get side-by-side comparison data for 2 to 4 schemes (Requires Auth)
+router.post('/compare', auth, async (req, res) => {
   try {
-    const { identifiers } = req.body; // array of slugs or ObjectIds
+    const { identifiers } = req.body;
     if (!identifiers || !Array.isArray(identifiers) || identifiers.length === 0) {
       return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Identifiers array is required' } });
     }
@@ -82,8 +83,8 @@ router.post('/compare', async (req, res) => {
 });
 
 // @route   POST /api/schemes/natural-search
-// @desc    Natural language AI search proxy
-router.post('/natural-search', async (req, res) => {
+// @desc    Natural language AI search proxy (Requires Auth)
+router.post('/natural-search', auth, async (req, res) => {
   try {
     const { query } = req.body;
     try {
@@ -106,15 +107,14 @@ router.post('/natural-search', async (req, res) => {
 });
 
 // @route   GET /api/schemes/:slug
-// @desc    Get single scheme details by slug
-router.get('/:slug', async (req, res) => {
+// @desc    Get single scheme details by slug (Requires Auth)
+router.get('/:slug', auth, async (req, res) => {
   try {
     const scheme = await Scheme.findOne({ slug: req.params.slug });
     if (!scheme) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Scheme not found' } });
     }
 
-    // Similar schemes in same state/category
     const similar = await Scheme.find({
       _id: { $ne: scheme._id },
       $or: [{ level: scheme.level }, { state: scheme.state }]
@@ -127,10 +127,11 @@ router.get('/:slug', async (req, res) => {
 });
 
 // @route   POST /api/schemes/recommend
-// @desc    Proxy demographic filter request to FastAPI ML Service
-router.post('/recommend', async (req, res) => {
+// @desc    Proxy demographic filter request to FastAPI ML Service using authenticated user profile (Requires Auth)
+router.post('/recommend', auth, async (req, res) => {
   try {
-    const userProfile = req.body;
+    // SECURITY: Always use authenticated user's profile from server-side session
+    const userProfile = { ...req.user.profile.toObject(), ...req.body };
 
     try {
       const response = await axios.post(`${ML_SERVICE_URL}/recommend`, userProfile, {
@@ -139,7 +140,7 @@ router.post('/recommend', async (req, res) => {
       });
       return res.json(response.data);
     } catch (mlErr) {
-      console.warn('ML Microservice proxy offline, using DB fallback explainable filter engine...', mlErr.message);
+      console.warn('ML Microservice proxy offline, executing DB fallback filter engine...', mlErr.message);
 
       const allSchemes = await Scheme.find({});
       const eligible = [];
@@ -220,7 +221,6 @@ router.post('/recommend', async (req, res) => {
           }
         }
 
-        // Calculate affinity match percentage
         let score = 40.0;
         if (scheme.maxIncome > 0) {
           score += (1.0 - (userIncome / scheme.maxIncome)) * 20.0;
@@ -249,7 +249,6 @@ router.post('/recommend', async (req, res) => {
         eligible.push(schemeObj);
       }
 
-      // Sort DESCENDING (highest match score first)
       eligible.sort((a, b) => b.match_percentage - a.match_percentage);
 
       return res.json({

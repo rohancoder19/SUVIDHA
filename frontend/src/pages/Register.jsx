@@ -1,210 +1,178 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Lock, Mail, User, ArrowRight, AlertCircle, MapPin, Sliders } from 'lucide-react';
-
-const INDIAN_STATES = [
-  'Madhya Pradesh', 'Maharashtra', 'Uttar Pradesh', 'West Bengal', 'Telangana',
-  'Karnataka', 'Tamil Nadu', 'Odisha', 'Gujarat', 'Delhi', 'All India'
-];
+import { Shield, Lock, Mail, User, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const [role, setRole] = useState('Citizen');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Demographic Profile Defaults
-  const [profile, setProfile] = useState({
-    state: 'Madhya Pradesh',
-    age: 28,
-    gender: 'Male',
-    income: 180000,
-    category: 'OBC',
-    isStudent: false,
-    occupation: 'Farmer',
-    pincode: '462001'
-  });
-
-  const [error, setError] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Password requirements rules
+  const rules = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    match: password.length > 0 && password === confirmPassword
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    if (!rules.length || !rules.upper || !rules.lower || !rules.number) {
+      setError('Please satisfy all password security requirements.');
+      return;
+    }
+    if (!rules.match) {
+      setError('Password and Confirm Password do not match.');
+      return;
+    }
+
     setLoading(true);
+    setError('');
 
-    const res = await register(name, email, password, role, profile);
-    setLoading(false);
-
+    const res = await register(name, email, password, 'Citizen');
     if (res.success) {
-      navigate('/');
+      navigate('/dashboard', { replace: true });
     } else {
       setError(res.error || 'Registration failed.');
     }
+    setLoading(false);
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-8">
-      <div className="glass-panel p-8 rounded-3xl border border-slate-800 space-y-6">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
         
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-teal-500/20 mx-auto">
-            <Shield className="w-6 h-6 text-slate-950" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-100 font-outfit">Create SUVIDHA Account</h1>
-          <p className="text-xs text-slate-400">Join the civic platform for automated scheme discovery & grievance tracking.</p>
+          <img src="/logo.svg" alt="SUVIDHA 2.0" className="w-12 h-12 object-contain mx-auto" />
+          <h2 className="text-2xl font-extrabold font-outfit">Create Your SUVIDHA Account</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Join the AI civic platform to discover personalized welfare schemes and track applications.
+          </p>
         </div>
 
         {error && (
-          <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Role Selector Toggle */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-300">Select Account Type / Role</label>
-          <div className="grid grid-cols-2 gap-3 p-1 bg-slate-900 border border-slate-800 rounded-2xl">
-            <button
-              type="button"
-              onClick={() => setRole('Citizen')}
-              className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
-                role === 'Citizen' ? 'bg-teal-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Citizen Account
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('Officer')}
-              className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
-                role === 'Officer' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Nodal Officer Account
-            </button>
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs font-semibold text-slate-300">Full Name *</label>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Full Name *
+            </label>
+            <div className="relative">
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ramesh Sharma"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Email Address *</label>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Email Address *
+            </label>
+            <div className="relative">
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ramesh@example.com"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Password *</label>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Password *
+            </label>
+            <div className="relative">
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full pl-10 pr-10 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
-
           </div>
 
-          {/* Demographic Defaults Section */}
-          <div className="pt-4 border-t border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center space-x-1.5">
-              <Sliders className="w-3.5 h-3.5" />
-              <span>Default Demographic Profile (For Automated Matching)</span>
-            </h4>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Confirm Password *
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+            </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300">State</label>
-                <select
-                  value={profile.state}
-                  onChange={(e) => setProfile({ ...profile, state: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
-                >
-                  {INDIAN_STATES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300">Age</label>
-                <input
-                  type="number"
-                  value={profile.age}
-                  onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value, 10) })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300">Household Income (₹)</label>
-                <input
-                  type="number"
-                  value={profile.income}
-                  onChange={(e) => setProfile({ ...profile, income: parseFloat(e.target.value) })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300">Social Category</label>
-                <select
-                  value={profile.category}
-                  onChange={(e) => setProfile({ ...profile, category: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
-                >
-                  <option value="General">General</option>
-                  <option value="OBC">OBC</option>
-                  <option value="SC">SC</option>
-                  <option value="ST">ST</option>
-                  <option value="EWS">EWS</option>
-                </select>
-              </div>
+          {/* Password Complexity Indicators */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1 text-xs">
+            <div className="font-semibold text-slate-500 mb-1">Password Requirements:</div>
+            <div className={`flex items-center gap-2 ${rules.length ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+              <span>{rules.length ? '✓' : '○'}</span> At least 8 characters
+            </div>
+            <div className={`flex items-center gap-2 ${rules.upper ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+              <span>{rules.upper ? '✓' : '○'}</span> One uppercase letter (A-Z)
+            </div>
+            <div className={`flex items-center gap-2 ${rules.lower ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+              <span>{rules.lower ? '✓' : '○'}</span> One lowercase letter (a-z)
+            </div>
+            <div className={`flex items-center gap-2 ${rules.number ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+              <span>{rules.number ? '✓' : '○'}</span> One number (0-9)
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="glow-btn-primary w-full py-3 rounded-xl text-xs font-bold text-slate-950 flex items-center justify-center space-x-2 mt-4"
+            className="w-full py-3.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 flex items-center justify-center space-x-2"
           >
-            {loading ? 'Creating Account...' : 'Complete Registration'}
+            <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="text-center text-xs text-slate-400">
+        <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
           Already have an account?{' '}
-          <Link to="/login" className="text-teal-400 hover:underline font-semibold">
-            Sign in here
+          <Link to="/login" className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+            Sign In
           </Link>
         </div>
 

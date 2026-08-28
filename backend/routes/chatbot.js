@@ -1,14 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const { auth } = require('../middleware/auth');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
 
 // @route   POST /api/chatbot/query
-// @desc    Proxy RAG query to FastAPI ML microservice
-router.post('/query', async (req, res) => {
+// @desc    Proxy RAG query to FastAPI ML microservice (Requires Auth)
+router.post('/query', auth, async (req, res) => {
   try {
-    const { query, userProfile } = req.body;
+    const { query } = req.body;
+    const userProfile = req.user ? req.user.profile : req.body.userProfile;
 
     if (!query) {
       return res.status(400).json({ success: false, error: 'Query string is required.' });

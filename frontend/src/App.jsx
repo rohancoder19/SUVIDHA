@@ -7,6 +7,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import RAGChatbotModal from './components/RAGChatbotModal';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import Home from './pages/Home';
 import WelfareFinder from './pages/WelfareFinder';
@@ -17,6 +18,8 @@ import ComplaintStatus from './pages/ComplaintStatus';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 
 export default function App() {
@@ -31,26 +34,33 @@ export default function App() {
           
           <main className="flex-1">
             <Routes>
-              <Route path="/" element={<Home onOpenChat={() => setIsChatOpen(true)} />} />
-              <Route path="/finder" element={<WelfareFinder />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* Public Unauthenticated Gateway Routes ONLY */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-              <Route path="/tracker" element={<ApplicationTracker />} />
-              <Route path="/complaint" element={<Complaint />} />
-              <Route path="/complaint-status" element={<ComplaintStatus />} />
+              {/* Protected Application Routes (Requires Verified Session) */}
+              <Route path="/" element={<ProtectedRoute><Home onOpenChat={() => setIsChatOpen(true)} /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/finder" element={<ProtectedRoute><WelfareFinder /></ProtectedRoute>} />
+              <Route path="/tracker" element={<ProtectedRoute><ApplicationTracker /></ProtectedRoute>} />
+              <Route path="/complaint" element={<ProtectedRoute><Complaint /></ProtectedRoute>} />
+              <Route path="/complaint-status" element={<ProtectedRoute><ComplaintStatus /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              
+              {/* Officer / Admin Protected Route */}
               <Route
                 path="/admin"
                 element={
-                  user?.role === 'Officer' || user?.role === 'Admin' ? (
+                  <ProtectedRoute roles={['Officer', 'Admin']}>
                     <AdminDashboard />
-                  ) : (
-                    <Navigate to="/login?redirect=/admin" replace />
-                  )
+                  </ProtectedRoute>
                 }
               />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
+
+              {/* Fallback Route */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </main>
 
