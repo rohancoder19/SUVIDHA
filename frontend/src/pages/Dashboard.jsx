@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [recommendedSchemes, setRecommendedSchemes] = useState([]);
   const [savedSchemes, setSavedSchemes] = useState([]);
   const [trackedApps, setTrackedApps] = useState([]);
+  const [grievances, setGrievances] = useState([]);
   const [docStatuses, setDocStatuses] = useState({});
   const [activeTab, setActiveTab] = useState('recommended');
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function Dashboard() {
         setRecommendedSchemes(recRes.data.schemes.slice(0, 6));
       }
 
-      // 2. Fetch saved schemes & document status (API for logged-in user, LocalStorage for guest)
+      // 2. Fetch saved schemes & document status
       if (user) {
         try {
           const bmRes = await axios.get('/api/bookmarks');
@@ -47,8 +48,16 @@ export default function Dashboard() {
             setSavedSchemes(bmRes.data.data.savedSchemes || []);
             setDocStatuses(bmRes.data.data.documentStatuses || {});
           }
+          const appRes = await axios.get('/api/applications');
+          if (appRes.data.data) {
+            setTrackedApps(appRes.data.data.applications || []);
+          }
+          const grRes = await axios.get('/api/grievances/my-grievances');
+          if (grRes.data.success) {
+            setGrievances(grRes.data.grievances || []);
+          }
         } catch (err) {
-          console.warn('Bookmarks API call note:', err.message);
+          console.warn('Dashboard API call note:', err.message);
         }
       } else {
         const localSaved = JSON.parse(localStorage.getItem('suvidha_guest_saved') || '[]');
@@ -62,6 +71,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
 
   const handleDocStatusChange = async (docName, status) => {
     const updatedDocs = { ...docStatuses, [docName]: status };

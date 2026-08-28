@@ -3,9 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Shield, Search, FileText, CheckCircle, Sparkles, User, LogOut, Sun, Moon, Globe, Menu, X, LayoutDashboard } from 'lucide-react';
+import NotificationDrawer from './NotificationDrawer';
 
 export default function Navbar({ onOpenChat }) {
+
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { language, changeLanguage, t } = useLanguage();
@@ -83,13 +84,13 @@ export default function Navbar({ onOpenChat }) {
           </Link>
 
           <Link
-            to="/complaint"
+            to="/grievances"
             className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 ${
-              isActive('/complaint') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
+              isActive('/grievances') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>{t('navComplaint')}</span>
+            <span>Grievances</span>
           </Link>
 
           {(user?.role === 'Officer' || user?.role === 'Admin') && (
@@ -104,10 +105,25 @@ export default function Navbar({ onOpenChat }) {
           )}
         </nav>
 
-        {/* Controls (Theme, Language, Auth, Chat) */}
+        {/* Controls (Theme, Language, Auth, Notifications, Chat) */}
         <div className="flex items-center space-x-2.5">
+          {/* Notification Drawer */}
+          {user && <NotificationDrawer />}
+
           {/* Language Selector */}
           <div className="relative flex items-center">
+            <Globe className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
+            <select
+              value={language}
+              onChange={(e) => changeLanguage(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-full border border-slate-200 dark:border-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="en">EN</option>
+              <option value="hi">हिंदी</option>
+              <option value="bn">বাংলা</option>
+            </select>
+          </div>
+
             <Globe className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
             <select
               value={language}

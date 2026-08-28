@@ -8,13 +8,13 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import RAGChatbotModal from './components/RAGChatbotModal';
 import ProtectedRoute from './components/ProtectedRoute';
+import MobileBottomNav from './components/MobileBottomNav';
 
 import Home from './pages/Home';
 import WelfareFinder from './pages/WelfareFinder';
 import Dashboard from './pages/Dashboard';
 import ApplicationTracker from './pages/ApplicationTracker';
-import Complaint from './pages/Complaint';
-import ComplaintStatus from './pages/ComplaintStatus';
+import GrievancePortal from './pages/GrievancePortal';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -29,7 +29,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 font-sans">
+        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 font-sans pb-16 md:pb-0">
           <Navbar onOpenChat={() => setIsChatOpen(true)} />
           
           <main className="flex-1">
@@ -45,8 +45,8 @@ export default function App() {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/finder" element={<ProtectedRoute><WelfareFinder /></ProtectedRoute>} />
               <Route path="/tracker" element={<ProtectedRoute><ApplicationTracker /></ProtectedRoute>} />
-              <Route path="/complaint" element={<ProtectedRoute><Complaint /></ProtectedRoute>} />
-              <Route path="/complaint-status" element={<ProtectedRoute><ComplaintStatus /></ProtectedRoute>} />
+              <Route path="/grievances" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
+              <Route path="/grievances/track" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               
               {/* Officer / Admin Protected Route */}
@@ -65,6 +65,9 @@ export default function App() {
           </main>
 
           <Footer />
+
+          {/* Touch-Friendly Mobile Bottom Bar */}
+          {user && <MobileBottomNav />}
 
           <RAGChatbotModal
             isOpen={isChatOpen}
