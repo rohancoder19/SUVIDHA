@@ -16,8 +16,8 @@ SUVIDHA 2.0 provides an **AI-driven scheme matching engine**, a **natural langua
 
 ## 📸 Screenshots & Diagrams
 
-### Welfare Scheme Portal
-![Welfare Scheme Portal](docs/assets/welfare_scheme_portal.png)
+### SUVIDHA Citizen Portal Homepage
+![SUVIDHA Citizen Portal Homepage](docs/assets/welfare_scheme_portal.png)
 
 ### System Architecture
 ![System Architecture](docs/assets/system_architecture_3d.png)
