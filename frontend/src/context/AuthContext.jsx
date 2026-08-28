@@ -24,23 +24,26 @@ export const AuthProvider = ({ children }) => {
 
   // Session Restoration on App Startup via /api/auth/me
   useEffect(() => {
+    let isMounted = true;
     const restoreSession = async () => {
-      setIsLoading(true);
       try {
-        const res = await axios.get('/api/auth/me');
-        if (res.data.success && res.data.user) {
+        const savedToken = localStorage.getItem('suvidha_token');
+        if (savedToken) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+        }
+        const res = await axios.get('/api/auth/me', { headers: { 'x-restore-session': 'true' } });
+        if (isMounted && res.data.success && res.data.user) {
           setUser(res.data.user);
-        } else {
-          setUser(null);
         }
       } catch (err) {
-        setUser(null);
+        if (isMounted) setUser(null);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     restoreSession();
+    return () => { isMounted = false; };
   }, []);
 
   // Global Axios Interceptor for 401 Unauthorized Session Expiration
@@ -48,7 +51,10 @@ export const AuthProvider = ({ children }) => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response && error.response.status === 401) {
+        const isRestoreReq = error.config?.headers?.['x-restore-session'];
+        const reqUrl = error.config?.url || '';
+
+        if (error.response && error.response.status === 401 && !isRestoreReq && !reqUrl.includes('/api/auth/login')) {
           setUser(null);
           setToken(null);
           localStorage.removeItem('suvidha_token');
@@ -66,6 +72,7 @@ export const AuthProvider = ({ children }) => {
 
     return () => axios.interceptors.response.eject(interceptor);
   }, []);
+
 
   const login = async (email, password) => {
     try {
