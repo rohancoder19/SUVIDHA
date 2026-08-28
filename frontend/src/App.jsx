@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Bot, Sparkles } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -32,7 +33,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 font-sans pb-16 md:pb-0">
+        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 font-sans pb-16 md:pb-0 relative">
           <Navbar onOpenChat={() => setIsChatOpen(true)} />
           
           <main className="flex-1">
@@ -100,6 +101,21 @@ export default function App() {
           </main>
 
           <Footer />
+
+          {/* Persistent Floating AI Chatbot Button Across All Tabs for Admin, Officer, & Citizen */}
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="fixed bottom-20 md:bottom-8 right-6 z-40 p-3.5 rounded-full bg-gradient-to-tr from-cyan-500 via-emerald-400 to-teal-400 text-slate-950 shadow-2xl shadow-cyan-500/40 hover:scale-110 active:scale-95 transition-all duration-200 group flex items-center space-x-2 border-2 border-cyan-300/60"
+            title="Open SUVIDHA AI Chatbot Assistant"
+          >
+            <div className="relative">
+              <Bot className="w-6 h-6 text-slate-950" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            </div>
+            <span className="hidden md:inline font-extrabold text-xs tracking-wider pr-1">
+              AI Assistant
+            </span>
+          </button>
 
           {/* Touch-Friendly Mobile Bottom Bar */}
           {user && <MobileBottomNav />}

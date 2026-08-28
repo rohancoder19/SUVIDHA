@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import NotificationDrawer from './NotificationDrawer';
-import { Search, LayoutDashboard, CheckCircle, FileText, Globe, Sun, Moon, Sparkles, LogOut, X, Menu, AlertTriangle, User as UserIcon } from 'lucide-react';
+import { Search, LayoutDashboard, CheckCircle, FileText, Globe, Sun, Moon, Sparkles, LogOut, X, Menu, AlertTriangle, User as UserIcon, Bot } from 'lucide-react';
 
 export default function Navbar({ onOpenChat }) {
   const { user, logout } = useAuth();
@@ -109,6 +109,17 @@ export default function Navbar({ onOpenChat }) {
 
         {/* Right Side User Pill & Controls */}
         <div className="flex items-center space-x-3">
+          
+          {/* Global AI Chatbot Launcher Button */}
+          <button
+            onClick={onOpenChat}
+            className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 font-extrabold text-xs flex items-center space-x-1.5 shadow-lg shadow-cyan-500/20 hover:scale-105 transition-all"
+            title="Launch SUVIDHA AI Chatbot Assistant"
+          >
+            <Bot className="w-4 h-4 text-slate-950" />
+            <span className="hidden sm:inline">Ask AI</span>
+          </button>
+
           {user ? (
             <div className="flex items-center space-x-2">
               
