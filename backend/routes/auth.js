@@ -23,11 +23,13 @@ const validatePassword = (password) => {
 
 // Helper: Set HTTP-Only Cookie
 const setAuthCookie = (res, token) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/'
   });
 };
 
@@ -110,22 +112,13 @@ router.post('/login', async (req, res) => {
 
     if (!user) {
       console.log(`[AUTH] Diagnostic result: USER_NOT_FOUND for normalized email "${normalizedEmail}"`);
-      return res.status(400).json({ success: false, error: 'Invalid email or password.' });
+      return res.status(401).json({ success: false, error: 'Invalid email or password.' });
     }
 
-    let isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      // Demo Account Safe Sync: If logging into rohan@gmail.com with custom password, update hash and allow login
-      if (normalizedEmail === 'rohan@gmail.com' && password && password.length >= 4) {
-        console.log(`[AUTH] Auto-updating password for demo account "${normalizedEmail}" to entered password.`);
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-        await user.save();
-        isMatch = true;
-      } else {
-        console.log(`[AUTH] Diagnostic result: PASSWORD_MISMATCH for user ID ${user._id}`);
-        return res.status(400).json({ success: false, error: 'Invalid email or password.' });
-      }
+      console.log(`[AUTH] Diagnostic result: PASSWORD_MISMATCH for user ID ${user._id}`);
+      return res.status(401).json({ success: false, error: 'Invalid email or password.' });
     }
 
     console.log(`[AUTH] Password verified successfully for user ID ${user._id} (${user.role})`);
@@ -154,7 +147,13 @@ router.post('/login', async (req, res) => {
 // @route   POST /api/auth/logout
 // @desc    Invalidate session & clear HTTP-Only cookie
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/'
+  });
   res.json({ success: true, message: 'Logged out successfully.' });
 });
 
