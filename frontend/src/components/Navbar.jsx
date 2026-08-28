@@ -20,7 +20,7 @@ export default function Navbar({ onOpenChat }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         
         {/* Brand Logo */}
-        <Link to={user?.role === 'Officer' || user?.role === 'Admin' ? '/officer/dashboard' : '/'} className="flex items-center space-x-3 group">
+        <Link to={user?.role === 'Officer' || user?.role === 'Admin' ? '/admin/dashboard' : '/'} className="flex items-center space-x-3 group">
           <div className="w-10 h-10 rounded-xl bg-slate-900 border border-emerald-500/40 p-1.5 flex items-center justify-center shadow-lg shadow-emerald-500/10 group-hover:scale-105 transition-transform duration-200">
             <img
               src="/logo.svg"
@@ -86,23 +86,12 @@ export default function Navbar({ onOpenChat }) {
 
           {(user?.role === 'Officer' || user?.role === 'Admin') && (
             <Link
-              to="/officer/dashboard"
+              to="/admin/dashboard"
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                isActive('/officer/dashboard') || isActive('/officer') ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-amber-400 hover:bg-amber-950/40'
+                isActive('/admin/dashboard') || isActive('/admin') || isActive('/officer/dashboard') ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-amber-400 hover:bg-amber-950/40'
               }`}
             >
-              <span>Officer Portal</span>
-            </Link>
-          )}
-
-          {user?.role === 'Admin' && (
-            <Link
-              to="/admin"
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                isActive('/admin') ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              <span>Admin Portal</span>
+              <span>Control Portal</span>
             </Link>
           )}
         </nav>
@@ -127,7 +116,7 @@ export default function Navbar({ onOpenChat }) {
               <NotificationDrawer />
 
               {/* User Identity Box */}
-              <Link to={user.role === 'Officer' || user.role === 'Admin' ? '/officer/dashboard' : '/dashboard'} className="flex items-center space-x-2.5 bg-[#0e1726]/90 border border-[#1e293b] px-3.5 py-1.5 rounded-2xl hover:border-emerald-500/50 transition-all">
+              <Link to={user.role === 'Officer' || user.role === 'Admin' ? '/admin/dashboard' : '/dashboard'} className="flex items-center space-x-2.5 bg-[#0e1726]/90 border border-[#1e293b] px-3.5 py-1.5 rounded-2xl hover:border-emerald-500/50 transition-all">
                 <div className="w-7 h-7 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-extrabold text-xs flex items-center justify-center">
                   {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
@@ -188,10 +177,7 @@ export default function Navbar({ onOpenChat }) {
             </>
           )}
           {(user?.role === 'Officer' || user?.role === 'Admin') && (
-            <Link to="/officer/dashboard" onClick={() => setMobileMenuOpen(false)} className="block p-3 rounded-xl bg-amber-500 text-slate-950 font-bold">Officer Portal</Link>
-          )}
-          {user?.role === 'Admin' && (
-            <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block p-3 rounded-xl bg-indigo-600 text-white font-bold">Admin Portal</Link>
+            <Link to="/admin/dashboard" onClick={() => setMobileMenuOpen(false)} className="block p-3 rounded-xl bg-amber-500 text-slate-950 font-bold">Control Portal</Link>
           )}
         </div>
       )}

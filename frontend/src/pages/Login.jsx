@@ -23,9 +23,7 @@ export default function Login() {
     if (isAuthenticated && user) {
       const userRole = user.role;
       let target = redirectTarget;
-      if (userRole === 'Officer') {
-        target = '/officer/dashboard';
-      } else if (userRole === 'Admin') {
+      if (userRole === 'Officer' || userRole === 'Admin') {
         target = '/admin/dashboard';
       }
       navigate(target, { replace: true });
@@ -41,9 +39,7 @@ export default function Login() {
     if (res.success) {
       const userRole = res.user?.role;
       let target = redirectTarget;
-      if (userRole === 'Officer') {
-        target = '/officer/dashboard';
-      } else if (userRole === 'Admin') {
+      if (userRole === 'Officer' || userRole === 'Admin') {
         target = '/admin/dashboard';
       }
       navigate(target, { replace: true });

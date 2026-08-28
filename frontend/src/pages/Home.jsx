@@ -12,9 +12,7 @@ export default function Home({ onOpenChat }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user?.role === 'Officer') {
-      navigate('/officer/dashboard', { replace: true });
-    } else if (user?.role === 'Admin') {
+    if (user?.role === 'Officer' || user?.role === 'Admin') {
       navigate('/admin/dashboard', { replace: true });
     }
   }, [user, navigate]);

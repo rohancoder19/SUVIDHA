@@ -1,0 +1,9 @@
+# Secrets
+.env
+
+# Dependencies
+node_modules/
+
+# Uploads
+public/uploads/*
+!public/uploads/.gitkeep

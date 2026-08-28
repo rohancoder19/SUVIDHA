@@ -12,7 +12,7 @@ const { auth, requireRole } = require('../middleware/auth');
 
 // All admin routes require Admin role
 router.use(auth);
-router.use(requireRole(['Admin']));
+router.use(requireRole(['Admin', 'Officer']));
 
 // @route   GET /api/admin/analytics
 // @desc    Get real-time database statistics & analytics for admin dashboard

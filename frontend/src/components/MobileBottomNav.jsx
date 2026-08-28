@@ -58,26 +58,14 @@ export default function MobileBottomNav() {
       ) : (
         <>
           <Link
-            to="/officer/dashboard"
+            to="/admin/dashboard"
             className={`flex flex-col items-center space-y-0.5 p-1 transition-colors ${
-              isActive('/officer/dashboard') ? 'text-amber-500 font-extrabold' : 'text-slate-500 dark:text-slate-400'
+              isActive('/admin/dashboard') || isActive('/admin') || isActive('/officer/dashboard') ? 'text-amber-500 font-extrabold' : 'text-slate-500 dark:text-slate-400'
             }`}
           >
             <ShieldAlert className="w-5 h-5" />
-            <span>Officer Portal</span>
+            <span>Control Portal</span>
           </Link>
-
-          {user?.role === 'Admin' && (
-            <Link
-              to="/admin"
-              className={`flex flex-col items-center space-y-0.5 p-1 transition-colors ${
-                isActive('/admin') ? 'text-indigo-500 font-extrabold' : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              <Shield className="w-5 h-5" />
-              <span>Admin Portal</span>
-            </Link>
-          )}
         </>
       )}
 

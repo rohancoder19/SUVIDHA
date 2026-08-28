@@ -28,7 +28,7 @@ export default function Register() {
       const userRole = user.role;
       let target = '/dashboard';
       if (userRole === 'Officer' || userRole === 'Admin') {
-        target = '/officer/dashboard';
+        target = '/admin/dashboard';
       }
       navigate(target, { replace: true });
     }
@@ -53,7 +53,7 @@ export default function Register() {
     if (res.success) {
       const userRole = res.user?.role || 'Citizen';
       if (userRole === 'Officer' || userRole === 'Admin') {
-        navigate('/officer/dashboard', { replace: true });
+        navigate('/admin/dashboard', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
       }

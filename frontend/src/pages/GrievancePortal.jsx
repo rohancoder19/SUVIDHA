@@ -62,12 +62,13 @@ export default function GrievancePortal() {
         setGrievances(res.data.grievances);
         setSelectedGrievance(res.data.grievances[0]);
       } else {
-        // If logged out or no personal grievances yet, fetch all public seeded grievances for tracking demo
-        trackByReferenceNumber('SUV-2026-000003');
+        setGrievances([]);
+        setSelectedGrievance(null);
       }
     } catch (err) {
       console.warn('My grievances endpoint notice:', err.message);
-      trackByReferenceNumber('SUV-2026-000003');
+      setGrievances([]);
+      setSelectedGrievance(null);
     } finally {
       setLoading(false);
     }

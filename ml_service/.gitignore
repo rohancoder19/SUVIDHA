@@ -1,0 +1,13 @@
+# Secrets
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Vector database & test files
+chroma_db/
+models/*.pkl
+test_*.py
+updated_data.csv
+data/processed_welfare_schemes.json

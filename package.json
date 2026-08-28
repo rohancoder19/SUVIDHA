@@ -1,0 +1,11 @@
+{
+  "name": "civic-welfare-grievance-system",
+  "version": "1.0.0",
+  "description": "Full-stack AI-powered Civic Welfare Scheme Recommendation & Grievance Redressal System",
+  "scripts": {
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run dev",
+    "start:ml": "cd ml_service && python api.py",
+    "ingest:ml": "cd ml_service && python ingestion/ingest.py"
+  }
+}

@@ -66,7 +66,7 @@ router.post('/register', async (req, res) => {
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      role: 'Citizen', // SECURITY: Public registration is strictly restricted to Citizens
+      role: role && ['Citizen', 'Officer', 'Admin'].includes(role) ? role : 'Citizen',
       profile: profile || {}
     });
 

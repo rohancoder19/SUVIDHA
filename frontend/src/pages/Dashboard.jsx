@@ -28,11 +28,7 @@ export default function Dashboard() {
   ];
 
   useEffect(() => {
-    if (user?.role === 'Officer') {
-      navigate('/officer/dashboard', { replace: true });
-      return;
-    }
-    if (user?.role === 'Admin') {
+    if (user?.role === 'Officer' || user?.role === 'Admin') {
       navigate('/admin/dashboard', { replace: true });
       return;
     }
