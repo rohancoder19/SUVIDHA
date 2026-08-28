@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const Scheme = require('../models/Scheme');
-const { auth } = require('../middleware/auth');
+const { auth, optionalAuth } = require('../middleware/auth');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
 
 // @route   GET /api/schemes
-// @desc    Get list of schemes with filtering, pagination & search (Requires Auth)
-router.get('/', auth, async (req, res) => {
+// @desc    Get list of schemes with filtering, pagination & search
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { state, district, level, category, search, page = 1, limit = 20 } = req.query;
     let query = { status: { $ne: 'Archived' } };

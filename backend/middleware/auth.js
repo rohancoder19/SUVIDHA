@@ -43,6 +43,24 @@ const auth = async (req, res, next) => {
   }
 };
 
+const optionalAuth = async (req, res, next) => {
+  try {
+    let token = null;
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    } else if (req.header('Authorization') && req.header('Authorization').startsWith('Bearer ')) {
+      token = req.header('Authorization').split(' ')[1];
+    }
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    }
+  } catch (err) {
+    // Optional auth fallback
+  }
+  next();
+};
+
 const requireRole = (roles = []) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -58,4 +76,4 @@ const requireRole = (roles = []) => {
   };
 };
 
-module.exports = { auth, requireRole };
+module.exports = { auth, optionalAuth, requireRole };
