@@ -8,17 +8,22 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [resetUrl, setResetUrl] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+    setResetUrl('');
     setError('');
 
     const res = await forgotPassword(email.trim());
     if (res.success) {
       setMessage(res.message);
+      if (res.resetUrl) {
+        setResetUrl(res.resetUrl);
+      }
     } else {
       setError(res.error);
     }
@@ -40,9 +45,18 @@ export default function ForgotPassword() {
         </div>
 
         {message && (
-          <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-start gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
-            <span>{message}</span>
+          <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs space-y-2">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
+              <span>{message}</span>
+            </div>
+            {resetUrl && (
+              <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800">
+                <Link to={resetUrl} className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 text-xs">
+                  Click here to Set New Password Now →
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

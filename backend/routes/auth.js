@@ -218,9 +218,15 @@ router.post('/forgot-password', async (req, res) => {
         token: resetToken,
         expiresAt
       });
+
+      return res.json({
+        success: true,
+        resetToken,
+        resetUrl: `/reset-password/${resetToken}`,
+        message: 'Password reset link generated successfully.'
+      });
     }
 
-    // Generic response to prevent email enumeration
     res.json({
       success: true,
       message: 'If an account exists for this email, password reset instructions have been generated.'
