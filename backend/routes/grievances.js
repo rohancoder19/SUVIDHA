@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const Grievance = require('../models/Grievance');
+const GrievanceHistory = require('../models/GrievanceHistory');
 const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
 const { auth, requireRole } = require('../middleware/auth');
@@ -24,12 +25,12 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ['.pdf', '.png', '.jpg', '.jpeg'];
+  const allowed = ['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.docx'];
   const ext = path.extname(file.originalname).toLowerCase();
   if (allowed.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file format. Only PDF, PNG, JPG, and JPEG are allowed.'));
+    cb(new Error('Invalid file format. Only PDF, PNG, JPG, JPEG, DOC are allowed.'));
   }
 };
 
@@ -49,8 +50,68 @@ const generateRefNumber = async () => {
   return ref;
 };
 
+// Helper: Record History & Audit
+const recordHistory = async ({ grievanceId, refNumber, actor, actorName, actorRole, action, oldStatus, newStatus, comment, attachments = [] }) => {
+  try {
+    await GrievanceHistory.create({
+      grievance: grievanceId,
+      referenceNumber: refNumber,
+      actor: actor ? actor._id || actor : null,
+      actorName: actorName || (actor ? actor.name : 'System'),
+      actorRole: actorRole || (actor ? actor.role : 'System'),
+      action,
+      oldStatus: oldStatus || '',
+      newStatus: newStatus || '',
+      comment: comment || '',
+      attachments: attachments || []
+    });
+  } catch (err) {
+    console.error('Grievance History Log error:', err);
+  }
+};
+
+// @route   POST /api/grievances/check-duplicate
+// @desc    Pre-submission duplicate grievance detection check
+router.post('/check-duplicate', auth, async (req, res) => {
+  try {
+    const { subject, category, description } = req.body;
+    if (!subject || !category) {
+      return res.json({ success: true, isDuplicate: false, duplicates: [] });
+    }
+
+    // Search for recent open grievances by same user or identical title/category
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const existing = await Grievance.find({
+      user: req.user._id,
+      category,
+      createdAt: { $gte: sevenDaysAgo },
+      status: { $ne: 'CLOSED' }
+    }).select('referenceNumber subject category status createdAt');
+
+    const matches = existing.filter(g => {
+      const gSub = g.subject.toLowerCase();
+      const sub = subject.toLowerCase();
+      return gSub.includes(sub) || sub.includes(gSub) || g.category === category;
+    });
+
+    if (matches.length > 0) {
+      return res.json({
+        success: true,
+        isDuplicate: true,
+        count: matches.length,
+        duplicates: matches,
+        message: 'A similar grievance in this category was recently submitted.'
+      });
+    }
+
+    res.json({ success: true, isDuplicate: false, duplicates: [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // @route   POST /api/grievances/classify
-// @desc    AI Smart Classification helper from title, description & location
+// @desc    AI Smart Classification helper
 router.post('/classify', auth, async (req, res) => {
   try {
     const { title, description, category, location } = req.body;
@@ -70,8 +131,6 @@ router.post('/classify', auth, async (req, res) => {
 
       return res.json(mlRes.data);
     } catch (mlErr) {
-      console.warn('ML Service offline, using local fallback classifier:', mlErr.message);
-
       const text = `${title} ${description}`.toLowerCase();
       let resCategory = category || 'Other';
       let department = 'Department of Public Grievances';
@@ -116,7 +175,7 @@ router.post('/classify', auth, async (req, res) => {
 });
 
 // @route   POST /api/grievances/create
-// @desc    Register a new public grievance with reference number, coordinates, & photo evidence
+// @desc    Register a new public grievance
 router.post('/create', auth, upload.array('attachments', 5), async (req, res) => {
   try {
     const {
@@ -129,12 +188,12 @@ router.post('/create', auth, upload.array('attachments', 5), async (req, res) =>
       return res.status(400).json({ success: false, error: 'Category, subject, and problem description are required.' });
     }
 
-    if (subject.length < 5 || subject.length > 150) {
-      return res.status(400).json({ success: false, error: 'Issue title must be between 5 and 150 characters.' });
+    if (subject.length < 3 || subject.length > 150) {
+      return res.status(400).json({ success: false, error: 'Issue title must be between 3 and 150 characters.' });
     }
 
-    if (description.length < 20 || description.length > 3000) {
-      return res.status(400).json({ success: false, error: 'Detailed description must be between 20 and 3000 characters.' });
+    if (description.length < 10 || description.length > 3000) {
+      return res.status(400).json({ success: false, error: 'Detailed description must be between 10 and 3000 characters.' });
     }
 
     const refNumber = await generateRefNumber();
@@ -143,12 +202,16 @@ router.post('/create', auth, upload.array('attachments', 5), async (req, res) =>
     const parsedLat = latitude && !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : null;
     const parsedLng = longitude && !isNaN(parseFloat(longitude)) ? parseFloat(longitude) : null;
 
+    const assignedDept = department || aiDepartment || 'Department of Revenue & Public Grievances';
+    const assignedPriority = priority || aiPriority || 'MEDIUM';
+
     const newGrievance = new Grievance({
       referenceNumber: refNumber,
       user: req.user._id,
       category,
       schemeName: schemeName || 'General Civic & Welfare Service',
-      department: department || aiDepartment || 'Department of Public Grievances',
+      department: assignedDept,
+      assignedDepartment: assignedDept,
       state: state || req.user.profile?.state || 'All India',
       district: district || req.user.profile?.district || '',
       subject,
@@ -159,24 +222,37 @@ router.post('/create', auth, upload.array('attachments', 5), async (req, res) =>
       latitude: parsedLat,
       longitude: parsedLng,
       attachments: attachmentPaths,
-      priority: priority || aiPriority || 'MEDIUM',
+      priority: assignedPriority,
       aiCategory: aiCategory || category,
-      aiPriority: aiPriority || priority || 'MEDIUM',
-      aiDepartment: aiDepartment || department || 'Department of Public Grievances',
+      aiPriority: aiPriority || assignedPriority,
+      aiDepartment: aiDepartment || assignedDept,
       aiReason: aiReason || '',
       urgencyScore: urgencyScore ? Number(urgencyScore) : 50,
       finalCategory: category,
-      finalPriority: priority || 'MEDIUM',
+      finalPriority: assignedPriority,
       status: 'SUBMITTED',
       statusHistory: [{
         status: 'SUBMITTED',
-        remark: 'Grievance submitted successfully with GPS coordinates and evidence proof.',
+        remark: 'Grievance registered by citizen.',
         updatedBy: req.user._id,
+        updatedByName: req.user.name,
+        updatedByRole: req.user.role,
         timestamp: new Date()
       }]
     });
 
     await newGrievance.save();
+
+    // Log History
+    await recordHistory({
+      grievanceId: newGrievance._id,
+      refNumber,
+      actor: req.user,
+      action: 'GRIEVANCE_REGISTERED',
+      newStatus: 'SUBMITTED',
+      comment: `Registered grievance under category ${category}`,
+      attachments: attachmentPaths
+    });
 
     // Trigger Notification for User
     await Notification.create({
@@ -187,7 +263,7 @@ router.post('/create', auth, upload.array('attachments', 5), async (req, res) =>
       link: `/grievances`
     });
 
-    // Record Audit Log
+    // Audit Log
     await AuditLog.create({
       user: req.user._id,
       action: 'GRIEVANCE_REGISTERED',
@@ -212,7 +288,41 @@ router.post('/create', auth, upload.array('attachments', 5), async (req, res) =>
 // @desc    Get list of grievances registered by authenticated citizen
 router.get('/my-grievances', auth, async (req, res) => {
   try {
-    const grievances = await Grievance.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const grievances = await Grievance.find({ user: req.user._id })
+      .populate('assignedOfficer', 'name email role')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: grievances.length,
+      grievances
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// @route   GET /api/grievances/officer/queue
+// @desc    Get grievances assigned to authenticated Nodal Officer or department
+router.get('/officer/queue', auth, requireRole(['Officer', 'Admin']), async (req, res) => {
+  try {
+    let query = {};
+    if (req.user.role === 'Officer') {
+      const officerDept = req.user.profile?.occupation || '';
+      query = {
+        $or: [
+          { assignedOfficer: req.user._id },
+          { department: { $regex: new RegExp(officerDept, 'i') } },
+          { assignedDepartment: { $regex: new RegExp(officerDept, 'i') } }
+        ]
+      };
+    }
+
+    const grievances = await Grievance.find(query)
+      .populate('user', 'name email role profile')
+      .populate('assignedOfficer', 'name email role')
+      .sort({ createdAt: -1 });
+
     res.json({
       success: true,
       count: grievances.length,
@@ -229,16 +339,18 @@ router.get('/track/:refNumber', async (req, res) => {
   try {
     const grievance = await Grievance.findOne({ referenceNumber: req.params.refNumber.toUpperCase() })
       .populate('user', 'name email role')
-      .populate('assignedOfficer', 'name email role')
-      .populate('statusHistory.updatedBy', 'name role');
+      .populate('assignedOfficer', 'name email role');
 
     if (!grievance) {
       return res.status(404).json({ success: false, error: 'No grievance found with reference number ' + req.params.refNumber });
     }
 
+    const history = await GrievanceHistory.find({ grievance: grievance._id }).sort({ createdAt: 1 });
+
     res.json({
       success: true,
-      grievance
+      grievance,
+      history
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -251,31 +363,32 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const grievance = await Grievance.findById(req.params.id)
       .populate('user', 'name email role profile')
-      .populate('assignedOfficer', 'name email role')
-      .populate('statusHistory.updatedBy', 'name role');
+      .populate('assignedOfficer', 'name email role');
 
     if (!grievance) {
       return res.status(404).json({ success: false, error: 'Grievance not found.' });
     }
 
-    // Citizen can only access their own grievance, Officers/Admins can access all
+    // Citizen can only access their own grievance, Officers/Admins can access assigned/all
     if (req.user.role === 'Citizen' && grievance.user._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, error: 'Access denied.' });
     }
 
-    res.json({ success: true, grievance });
+    const history = await GrievanceHistory.find({ grievance: grievance._id }).sort({ createdAt: 1 });
+
+    res.json({ success: true, grievance, history });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// @route   POST /api/grievances/:id/add-info
-// @desc    Citizen adds additional information or response to a grievance
-router.post('/:id/add-info', auth, upload.array('attachments', 3), async (req, res) => {
+// @route   POST /api/grievances/:id/reply
+// @desc    Citizen submits requested clarification or additional evidence
+router.post('/:id/reply', auth, upload.array('attachments', 3), async (req, res) => {
   try {
-    const { remark } = req.body;
-    if (!remark) {
-      return res.status(400).json({ success: false, error: 'Remark is required.' });
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ success: false, error: 'Message / clarification response is required.' });
     }
 
     const grievance = await Grievance.findById(req.params.id);
@@ -289,51 +402,200 @@ router.post('/:id/add-info', auth, upload.array('attachments', 3), async (req, r
 
     const attachmentPaths = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
 
-    grievance.citizenRemarks.push({
-      remark,
+    grievance.citizenReplies.push({
+      message,
       attachments: attachmentPaths,
-      timestamp: new Date()
+      createdAt: new Date()
     });
+
+    const oldStatus = grievance.status;
+    if (grievance.status === 'NEED_CLARIFICATION') {
+      grievance.status = 'IN_PROGRESS';
+    }
 
     grievance.statusHistory.push({
       status: grievance.status,
-      remark: `Citizen added info: "${remark}"`,
+      remark: `Citizen submitted response: "${message}"`,
       updatedBy: req.user._id,
+      updatedByName: req.user.name,
+      updatedByRole: req.user.role,
       timestamp: new Date()
     });
 
     await grievance.save();
 
-    res.json({ success: true, grievance, message: 'Additional information added.' });
+    await recordHistory({
+      grievanceId: grievance._id,
+      refNumber: grievance.referenceNumber,
+      actor: req.user,
+      action: 'CLARIFICATION_SUBMITTED',
+      oldStatus,
+      newStatus: grievance.status,
+      comment: message,
+      attachments: attachmentPaths
+    });
+
+    res.json({ success: true, grievance, message: 'Clarification submitted successfully.' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// @route   PUT /api/grievances/:id/status
-// @desc    Officer / Admin updates grievance status, assigns officer & adds remarks
-router.put('/:id/status', auth, requireRole(['Officer', 'Admin']), async (req, res) => {
+// @route   POST /api/grievances/:id/feedback
+// @desc    Citizen rates resolution satisfaction
+router.post('/:id/feedback', auth, async (req, res) => {
   try {
-    const { status, remark, assignedOfficerId, priority } = req.body;
+    const { rating, comment, isHelpful } = req.body;
+    if (!rating) {
+      return res.status(400).json({ success: false, error: 'Rating (1-5) is required.' });
+    }
 
     const grievance = await Grievance.findById(req.params.id);
     if (!grievance) {
       return res.status(404).json({ success: false, error: 'Grievance not found.' });
     }
 
+    if (grievance.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Access denied.' });
+    }
+
+    grievance.feedback = {
+      rating: Number(rating),
+      comment: comment || '',
+      isHelpful: isHelpful !== undefined ? isHelpful : true,
+      createdAt: new Date()
+    };
+
+    if (grievance.status === 'RESOLVED') {
+      grievance.status = 'CLOSED';
+      grievance.closedAt = new Date();
+      grievance.statusHistory.push({
+        status: 'CLOSED',
+        remark: `Citizen rated resolution (${rating}/5 stars). Grievance closed.`,
+        updatedBy: req.user._id,
+        updatedByName: req.user.name,
+        updatedByRole: req.user.role,
+        timestamp: new Date()
+      });
+    }
+
+    await grievance.save();
+
+    await recordHistory({
+      grievanceId: grievance._id,
+      refNumber: grievance.referenceNumber,
+      actor: req.user,
+      action: 'FEEDBACK_SUBMITTED',
+      oldStatus: 'RESOLVED',
+      newStatus: 'CLOSED',
+      comment: `Citizen feedback rating: ${rating}/5. ${comment || ''}`
+    });
+
+    res.json({ success: true, grievance, message: 'Thank you for your feedback!' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// @route   POST /api/grievances/:id/reopen
+// @desc    Citizen reopens / appeals an unresolved dispute
+router.post('/:id/reopen', auth, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason) {
+      return res.status(400).json({ success: false, error: 'Appeal / reopen reason is required.' });
+    }
+
+    const grievance = await Grievance.findById(req.params.id);
+    if (!grievance) {
+      return res.status(404).json({ success: false, error: 'Grievance not found.' });
+    }
+
+    if (grievance.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Access denied.' });
+    }
+
+    const oldStatus = grievance.status;
+    grievance.status = 'REOPENED';
+    grievance.statusHistory.push({
+      status: 'REOPENED',
+      remark: `Citizen reopened grievance: "${reason}"`,
+      updatedBy: req.user._id,
+      updatedByName: req.user.name,
+      updatedByRole: req.user.role,
+      timestamp: new Date()
+    });
+
+    await grievance.save();
+
+    await recordHistory({
+      grievanceId: grievance._id,
+      refNumber: grievance.referenceNumber,
+      actor: req.user,
+      action: 'REOPENED',
+      oldStatus,
+      newStatus: 'REOPENED',
+      comment: reason
+    });
+
+    res.json({ success: true, grievance, message: 'Grievance reopened for administrative review.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// @route   PUT /api/grievances/:id/status
+// @desc    Officer / Admin updates grievance status, priority, resolution & uploads proof
+router.put('/:id/status', auth, requireRole(['Officer', 'Admin']), upload.array('resolutionProof', 3), async (req, res) => {
+  try {
+    const { status, remark, assignedOfficerId, priority, resolution, rejectionReason } = req.body;
+
+    const grievance = await Grievance.findById(req.params.id);
+    if (!grievance) {
+      return res.status(404).json({ success: false, error: 'Grievance not found.' });
+    }
+
+    const oldStatus = grievance.status;
+
     if (status) grievance.status = status;
     if (priority) grievance.priority = priority;
     if (assignedOfficerId) grievance.assignedOfficer = assignedOfficerId;
     if (remark) grievance.officerRemarks = remark;
+    if (resolution) grievance.resolution = resolution;
+    if (rejectionReason) grievance.rejectionReason = rejectionReason;
+
+    const proofPaths = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
+    if (proofPaths.length > 0) {
+      grievance.resolutionProof = [...(grievance.resolutionProof || []), ...proofPaths];
+    }
+
+    if (['RESOLVED', 'CLOSED'].includes(status)) {
+      grievance.resolvedAt = new Date();
+      grievance.slaStatus = 'RESOLVED';
+    }
 
     grievance.statusHistory.push({
       status: grievance.status,
       remark: remark || `Status updated to ${grievance.status}`,
       updatedBy: req.user._id,
+      updatedByName: req.user.name,
+      updatedByRole: req.user.role,
+      attachments: proofPaths,
       timestamp: new Date()
     });
 
     await grievance.save();
+
+    await recordHistory({
+      grievanceId: grievance._id,
+      refNumber: grievance.referenceNumber,
+      actor: req.user,
+      action: 'STATUS_UPDATED',
+      oldStatus,
+      newStatus: grievance.status,
+      comment: remark || `Status changed to ${grievance.status}`,
+      attachments: proofPaths
+    });
 
     // Trigger Notification for Citizen
     await Notification.create({

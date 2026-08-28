@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   FileText, Sparkles, MapPin, ArrowLeft, Clock, CheckCircle2,
-  AlertCircle, Shield, AlertTriangle, Building, Calendar, User, Eye, Copy, Check
+  AlertCircle, Shield, AlertTriangle, Building, Calendar, User, Eye, Copy, Check, MessageSquare, Star, Send, RotateCcw, ThumbsUp
 } from 'lucide-react';
 
 export default function GrievanceDetail() {
@@ -11,9 +11,27 @@ export default function GrievanceDetail() {
   const navigate = useNavigate();
 
   const [grievance, setGrievance] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // Clarification Reply Form State
+  const [replyMessage, setReplyMessage] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replySuccess, setReplySuccess] = useState('');
+
+  // Feedback Form State
+  const [rating, setRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [isHelpful, setIsHelpful] = useState(true);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState('');
+
+  // Reopen Form State
+  const [reopenReason, setReopenReason] = useState('');
+  const [reopenSubmitting, setReopenSubmitting] = useState(false);
+  const [reopenSuccess, setReopenSuccess] = useState('');
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -29,6 +47,7 @@ export default function GrievanceDetail() {
       const res = await axios.get(`/api/grievances/${id}`);
       if (res.data.success) {
         setGrievance(res.data.grievance);
+        setHistory(res.data.history || []);
       }
     } catch (err) {
       console.error('Error fetching grievance details:', err);
@@ -76,6 +95,77 @@ export default function GrievanceDetail() {
     }
   };
 
+  const handleReplySubmit = async (e) => {
+    e.preventDefault();
+    if (!replyMessage.trim()) return;
+
+    setReplySubmitting(true);
+    setReplySuccess('');
+
+    try {
+      const res = await axios.post(`/api/grievances/${id}/reply`, {
+        message: replyMessage
+      });
+
+      if (res.data.success) {
+        setReplySuccess('Clarification response submitted successfully.');
+        setReplyMessage('');
+        fetchGrievanceDetail();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to submit response.');
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    setFeedbackSubmitting(true);
+    setFeedbackSuccess('');
+
+    try {
+      const res = await axios.post(`/api/grievances/${id}/feedback`, {
+        rating,
+        comment: feedbackComment,
+        isHelpful
+      });
+
+      if (res.data.success) {
+        setFeedbackSuccess('Rating & feedback submitted successfully. Thank you!');
+        fetchGrievanceDetail();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to submit feedback.');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
+  const handleReopenSubmit = async (e) => {
+    e.preventDefault();
+    if (!reopenReason.trim()) return;
+
+    setReopenSubmitting(true);
+    setReopenSuccess('');
+
+    try {
+      const res = await axios.post(`/api/grievances/${id}/reopen`, {
+        reason: reopenReason
+      });
+
+      if (res.data.success) {
+        setReopenSuccess('Grievance reopened for administrative review.');
+        setReopenReason('');
+        fetchGrievanceDetail();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to reopen grievance.');
+    } finally {
+      setReopenSubmitting(false);
+    }
+  };
+
   const getPriorityBadge = (p) => {
     switch (p) {
       case 'CRITICAL':
@@ -98,9 +188,15 @@ export default function GrievanceDetail() {
         return <span className="px-3.5 py-1.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-bold text-xs uppercase">Rejected</span>;
       case 'IN_PROGRESS':
       case 'ASSIGNED':
+      case 'ACTION_TAKEN':
         return <span className="px-3.5 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase">In Progress</span>;
+      case 'NEED_CLARIFICATION':
+      case 'ACTION_REQUIRED':
+        return <span className="px-3.5 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold text-xs uppercase animate-pulse">Action Required</span>;
+      case 'REOPENED':
+        return <span className="px-3.5 py-1.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-bold text-xs uppercase">Reopened</span>;
       default:
-        return <span className="px-3.5 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold text-xs uppercase">Under Review</span>;
+        return <span className="px-3.5 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold text-xs uppercase">Submitted</span>;
     }
   };
 
@@ -190,18 +286,15 @@ export default function GrievanceDetail() {
             </span>
           </div>
           <p className="text-xs text-slate-700 dark:text-slate-300">
-            Suggested Department: <strong>{grievance.department || grievance.aiDepartment || 'Department of Public Grievances'}</strong>
+            Assigned Department: <strong>{grievance.department || grievance.aiDepartment || 'Department of Public Grievances'}</strong>
           </p>
           {grievance.aiReason && (
             <p className="text-xs text-slate-600 dark:text-slate-400 italic">"{grievance.aiReason}"</p>
           )}
-          <p className="text-[10px] text-slate-400 font-medium pt-1">
-            SUVIDHA is an independent citizen-support platform. Final eligibility, approvals and grievance resolutions are determined by the concerned authorities.
-          </p>
         </div>
       </div>
 
-      {/* Grid: Left Problem & Map / Right Timeline */}
+      {/* Grid: Left Problem & Map / Right Timeline & Interactive Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left 2 Cols: Details & Location Map */}
@@ -218,7 +311,166 @@ export default function GrievanceDetail() {
             </p>
           </div>
 
-          {/* Location & Interactive Map */}
+          {/* Citizen Replies / Clarifications Timeline */}
+          {grievance.citizenReplies && grievance.citizenReplies.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-indigo-600" />
+                <span>Citizen Clarification Replies</span>
+              </h3>
+              <div className="space-y-3">
+                {grievance.citizenReplies.map((r, i) => (
+                  <div key={i} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-slate-500 font-semibold">
+                      <span>Clarification Reply</span>
+                      <span>{new Date(r.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="text-slate-800 dark:text-slate-200">{r.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Form: Submit Clarification if requested */}
+          {['NEED_CLARIFICATION', 'ACTION_REQUIRED'].includes(grievance.status) && (
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-3xl p-6 sm:p-8 space-y-4">
+              <div className="flex items-center space-x-2 text-amber-800 dark:text-amber-200 font-bold text-sm">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <span>Officer Requested Clarification</span>
+              </div>
+              <p className="text-xs text-amber-900 dark:text-amber-300">
+                Please provide the additional information requested by the nodal officer below to proceed.
+              </p>
+
+              {replySuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{replySuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleReplySubmit} className="space-y-3">
+                <textarea
+                  rows={3}
+                  value={replyMessage}
+                  onChange={(e) => setReplyMessage(e.target.value)}
+                  placeholder="Enter clarification response or additional details..."
+                  className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-xs focus:outline-none focus:border-amber-500"
+                />
+                <button
+                  type="submit"
+                  disabled={replySubmitting}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs flex items-center space-x-2 shadow-md"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{replySubmitting ? 'Submitting...' : 'Submit Response to Officer'}</span>
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Form: Rating & Feedback if Resolved */}
+          {['RESOLVED', 'CLOSED'].includes(grievance.status) && (
+            <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-3xl p-6 sm:p-8 space-y-4">
+              <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-bold text-base">
+                <ThumbsUp className="w-5 h-5 text-emerald-600" />
+                <span>Citizen Resolution Satisfaction Feedback</span>
+              </div>
+
+              {grievance.feedback && grievance.feedback.rating ? (
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 space-y-2 text-xs">
+                  <div className="flex items-center space-x-1 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} className={`w-4 h-4 ${star <= grievance.feedback.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-600'}`} />
+                    ))}
+                    <span className="text-slate-900 dark:text-white font-bold ml-2">({grievance.feedback.rating}/5)</span>
+                  </div>
+                  {grievance.feedback.comment && (
+                    <p className="text-slate-700 dark:text-slate-300 italic">"{grievance.feedback.comment}"</p>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+                  {feedbackSuccess && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+                      {feedbackSuccess}
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold">Rate Resolution:</span>
+                    <div className="flex space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          className="p-1 text-amber-400 hover:scale-110 transition-transform"
+                        >
+                          <Star className={`w-5 h-5 ${star <= rating ? 'fill-amber-400' : 'text-slate-400'}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <textarea
+                    rows={2}
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                    placeholder="Provide feedback on the officer resolution quality..."
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-xs"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={feedbackSubmitting}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md"
+                  >
+                    {feedbackSubmitting ? 'Submitting...' : 'Submit Resolution Feedback'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* Form: Reopen / Appeal Option if Resolved or Rejected */}
+          {['RESOLVED', 'REJECTED', 'CLOSED'].includes(grievance.status) && (
+            <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+              <div className="flex items-center space-x-2 text-slate-800 dark:text-slate-200 font-bold text-sm">
+                <RotateCcw className="w-5 h-5 text-indigo-500" />
+                <span>Dispute Resolution / Appeal Reopen</span>
+              </div>
+              <p className="text-xs text-slate-500">
+                If the problem persists or resolution was incomplete, you may appeal to reopen this grievance.
+              </p>
+
+              {reopenSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold">
+                  {reopenSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleReopenSubmit} className="space-y-3">
+                <textarea
+                  rows={2}
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  placeholder="State reason for reopening or appealing resolution..."
+                  className="w-full p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-xs"
+                />
+                <button
+                  type="submit"
+                  disabled={reopenSubmitting}
+                  className="px-5 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs shadow-md"
+                >
+                  {reopenSubmitting ? 'Reopening...' : 'Appeal & Reopen Grievance'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Location & Map */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-base flex items-center gap-2">
@@ -264,23 +516,38 @@ export default function GrievanceDetail() {
             </h3>
 
             <div className="relative pl-6 space-y-6 border-l-2 border-indigo-200 dark:border-indigo-900">
-              {grievance.statusHistory && grievance.statusHistory.map((step, idx) => (
-                <div key={idx} className="relative group">
-                  <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-indigo-600 ring-4 ring-indigo-100 dark:ring-indigo-950 flex items-center justify-center text-white text-[9px] font-bold">
-                    ✓
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-900 dark:text-white">{step.status}</span>
-                      <span className="text-[10px] text-slate-400">{new Date(step.timestamp).toLocaleDateString()}</span>
+              {history && history.length > 0 ? (
+                history.map((step, idx) => (
+                  <div key={idx} className="relative group">
+                    <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-indigo-600 ring-4 ring-indigo-100 dark:ring-indigo-950 flex items-center justify-center text-white text-[9px] font-bold">
+                      ✓
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300">{step.remark}</p>
-                    {step.updatedBy && (
-                      <p className="text-[10px] text-slate-400">By: {step.updatedBy.name || 'Officer Desk'}</p>
-                    )}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white">{step.action || step.newStatus}</span>
+                        <span className="text-[10px] text-slate-400">{new Date(step.timestamp || step.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      {step.comment && <p className="text-xs text-slate-600 dark:text-slate-300">{step.comment}</p>}
+                      <p className="text-[10px] text-slate-400">By: {step.actorName || 'System'} ({step.actorRole || 'Nodal'})</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                grievance.statusHistory && grievance.statusHistory.map((step, idx) => (
+                  <div key={idx} className="relative group">
+                    <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-indigo-600 ring-4 ring-indigo-100 dark:ring-indigo-950 flex items-center justify-center text-white text-[9px] font-bold">
+                      ✓
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white">{step.status}</span>
+                        <span className="text-[10px] text-slate-400">{new Date(step.timestamp).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{step.remark}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {grievance.officerRemarks && (
