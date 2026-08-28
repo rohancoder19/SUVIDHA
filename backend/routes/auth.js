@@ -47,7 +47,7 @@ router.post('/register', async (req, res) => {
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ success: false, error: 'An account with this email already exists.' });
+      return res.status(409).json({ success: false, error: 'An account with this email already exists.' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -137,6 +137,37 @@ router.get('/me', auth, async (req, res) => {
     success: true,
     user: req.user
   });
+});
+
+// @route   PUT /api/auth/profile
+// @desc    Update authenticated user profile details
+router.put('/profile', auth, async (req, res) => {
+  try {
+    const { name, profile } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    if (name) user.name = name;
+    if (profile && typeof profile === 'object') {
+      user.profile = {
+        ...user.profile.toObject(),
+        ...profile
+      };
+    }
+
+    await user.save();
+    const updatedUser = await User.findById(user._id).select('-password');
+
+    res.json({
+      success: true,
+      user: updatedUser,
+      message: 'Profile updated successfully.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // @route   POST /api/auth/forgot-password
