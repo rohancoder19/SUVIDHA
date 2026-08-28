@@ -124,17 +124,6 @@ export default function Navbar({ onOpenChat }) {
             </select>
           </div>
 
-            <Globe className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
-            <select
-              value={language}
-              onChange={(e) => changeLanguage(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-full border border-slate-200 dark:border-slate-700 focus:outline-none cursor-pointer"
-            >
-              <option value="en">EN</option>
-              <option value="hi">हिंदी</option>
-              <option value="bn">বাংলা</option>
-            </select>
-          </div>
 
           {/* Theme Toggle */}
           <button
