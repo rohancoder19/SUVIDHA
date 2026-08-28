@@ -73,8 +73,11 @@ export default function RAGChatbotModal({ isOpen, onClose, userProfile }) {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end p-4 bg-slate-950/70 backdrop-blur-md animate-fadeIn">
+
       <div className="w-full max-w-lg h-[90vh] glass-panel rounded-3xl border border-teal-500/30 flex flex-col shadow-2xl overflow-hidden relative">
         
         {/* Header */}
