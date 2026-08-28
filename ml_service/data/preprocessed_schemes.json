@@ -1,0 +1,460 @@
+[
+  {
+    "scheme_name": "PM Kisan Samman Nidhi",
+    "scheme_slug": "pm-kisan-samman-nidhi",
+    "department": "Ministry of Agriculture & Farmers Welfare",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 18,
+    "max_age": 75,
+    "gender": "All",
+    "max_income": 300000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Farmer"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Financial support of Rs 6000 per year to small and marginal farmer families across India.",
+    "eligibility_text": "Landholding small & marginal farmers aged 18 to 75 with annual household income up to 3 Lakhs.",
+    "benefits": "Rs 6000 per year paid in 3 equal installments of Rs 2000 directly to bank accounts.",
+    "application_url": "https://pmkisan.gov.in"
+  },
+  {
+    "scheme_name": "PM Awas Yojana (Urban)",
+    "scheme_slug": "pm-awas-yojana-urban",
+    "department": "Ministry of Housing and Urban Affairs",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 21,
+    "max_age": 70,
+    "gender": "All",
+    "max_income": 600000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Housing scheme to provide pucca houses to eligible urban households with interest subsidies.",
+    "eligibility_text": "Urban citizens aged 21-70 with annual family income up to 6 Lakhs.",
+    "benefits": "Interest subsidy up to 6.5% on housing loans up to Rs 2.67 Lakhs.",
+    "application_url": "https://pmaymis.gov.in"
+  },
+  {
+    "scheme_name": "PM MUDRA Yojana",
+    "scheme_slug": "pm-mudra-yojana",
+    "department": "Ministry of Finance",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 18,
+    "max_age": 65,
+    "gender": "All",
+    "max_income": 1000000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Artisan",
+      "Unemployed",
+      "Self Employed",
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Collateral-free micro loans up to Rs 10 Lakhs for non-corporate micro enterprises.",
+    "eligibility_text": "Non-corporate non-farm small micro enterprises owned by Indian citizens aged 18-65.",
+    "benefits": "Loans under Shishu (up to 50k) Kishor (up to 5L) and Tarun (up to 10L).",
+    "application_url": "https://www.mudra.org.in"
+  },
+  {
+    "scheme_name": "Post-Matric Scholarship for SC Students",
+    "scheme_slug": "post-matric-scholarship-sc",
+    "department": "Ministry of Social Justice and Empowerment",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 15,
+    "max_age": 30,
+    "gender": "All",
+    "max_income": 250000.0,
+    "is_student_only": true,
+    "target_occupations": [
+      "Student",
+      "All"
+    ],
+    "allowed_categories": [
+      "SC"
+    ],
+    "description": "Financial assistance to Scheduled Caste students studying at post-matriculation or post-secondary stage.",
+    "eligibility_text": "SC category students enrolled in post-matric courses with family income below 2.5 Lakhs.",
+    "benefits": "Full tuition fee coverage plus monthly maintenance allowance up to Rs 1350/month.",
+    "application_url": "https://scholarships.gov.in"
+  },
+  {
+    "scheme_name": "Sukanya Samriddhi Yojana",
+    "scheme_slug": "sukanya-samriddhi-yojana",
+    "department": "Ministry of Women and Child Development",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 0,
+    "max_age": 10,
+    "gender": "Female",
+    "max_income": 500000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Small savings scheme targeted at parents of girl children to build corpus for education and marriage.",
+    "eligibility_text": "Girl children below 10 years of age resident in India.",
+    "benefits": "High interest rate of 8.2% p.a. with tax exemption under Section 80C.",
+    "application_url": "https://www.indiapost.gov.in"
+  },
+  {
+    "scheme_name": "Ladli Behna Yojana (Madhya Pradesh)",
+    "scheme_slug": "ladli-behna-yojana-mp",
+    "department": "Department of Women and Child Development MP",
+    "level": "State",
+    "state_name": "Madhya Pradesh",
+    "min_age": 21,
+    "max_age": 60,
+    "gender": "Female",
+    "max_income": 250000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Unemployed",
+      "Homemaker",
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Monthly financial assistance to women in Madhya Pradesh to foster economic independence.",
+    "eligibility_text": "Married/widowed women in MP aged 21-60 with annual family income up to 2.5 Lakhs.",
+    "benefits": "Rs 1250 directly transferred to beneficiary bank account every month.",
+    "application_url": "https://cmladlibehna.mp.gov.in"
+  },
+  {
+    "scheme_name": "Kanyashree Prakalpa (West Bengal)",
+    "scheme_slug": "kanyashree-prakalpa-wb",
+    "department": "Department of Women Development & Social Welfare WB",
+    "level": "State",
+    "state_name": "West Bengal",
+    "min_age": 13,
+    "max_age": 19,
+    "gender": "Female",
+    "max_income": 120000.0,
+    "is_student_only": true,
+    "target_occupations": [
+      "Student",
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Conditional cash transfer scheme to improve status of adolescent girls and encourage education.",
+    "eligibility_text": "Unmarried girls aged 13-19 studying in recognized institutions with income up to 1.2 Lakhs.",
+    "benefits": "Annual grant of Rs 1000 plus one-time grant of Rs 25,000 on reaching 18 years.",
+    "application_url": "https://wbkanyashree.gov.in"
+  },
+  {
+    "scheme_name": "Rythu Bandhu Scheme (Telangana)",
+    "scheme_slug": "rythu-bandhu-telangana",
+    "department": "Agriculture Department Telangana",
+    "level": "State",
+    "state_name": "Telangana",
+    "min_age": 18,
+    "max_age": 80,
+    "gender": "All",
+    "max_income": 500000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Farmer"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Investment support scheme for agriculture and horticulture crops per season.",
+    "eligibility_text": "Farmer landowners in Telangana owning agricultural land.",
+    "benefits": "Rs 10000 per acre per year for two crop seasons.",
+    "application_url": "https://rythubandhu.telangana.gov.in"
+  },
+  {
+    "scheme_name": "Majhi Kanya Bhagyashree (Maharashtra)",
+    "scheme_slug": "majhi-kanya-bhagyashree-mh",
+    "department": "Women and Child Development Department MH",
+    "level": "State",
+    "state_name": "Maharashtra",
+    "min_age": 0,
+    "max_age": 18,
+    "gender": "Female",
+    "max_income": 750000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Financial support for the health and education of girl child in Maharashtra.",
+    "eligibility_text": "Girl child born in Maharashtra family with annual income up to 7.5 Lakhs.",
+    "benefits": "Rs 50000 deposited in bank account in the name of girl child.",
+    "application_url": "https://womenchild.maharashtra.gov.in"
+  },
+  {
+    "scheme_name": "Kalaignar Magalir Urimai Thittam (Tamil Nadu)",
+    "scheme_slug": "kalaignar-magalir-urimai-tn",
+    "department": "Department of Social Welfare TN",
+    "level": "State",
+    "state_name": "Tamil Nadu",
+    "min_age": 21,
+    "max_age": 65,
+    "gender": "Female",
+    "max_income": 250000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Homemaker",
+      "Unemployed",
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Rights grant for women heads of households in Tamil Nadu.",
+    "eligibility_text": "Women household heads aged 21-65 in Tamil Nadu with family income below 2.5 Lakhs.",
+    "benefits": "Rs 1000 per month direct benefit transfer.",
+    "application_url": "https://tn.gov.in"
+  },
+  {
+    "scheme_name": "Yuva Nidhi Scheme (Karnataka)",
+    "scheme_slug": "yuva-nidhi-karnataka",
+    "department": "Department of Employment Karnataka",
+    "level": "State",
+    "state_name": "Karnataka",
+    "min_age": 21,
+    "max_age": 30,
+    "gender": "All",
+    "max_income": 300000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Unemployed"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Unemployment stipend for fresh graduates and diploma holders residing in Karnataka.",
+    "eligibility_text": "Unemployed graduates/diploma holders passed out in recent academic year residing in Karnataka.",
+    "benefits": "Rs 3000/month for degree graduates and Rs 1500/month for diploma holders up to 2 years.",
+    "application_url": "https://sevasindhuservices.karnataka.gov.in"
+  },
+  {
+    "scheme_name": "Subhadra Yojana (Odisha)",
+    "scheme_slug": "subhadra-yojana-odisha",
+    "department": "Department of Women and Child Development Odisha",
+    "level": "State",
+    "state_name": "Odisha",
+    "min_age": 21,
+    "max_age": 60,
+    "gender": "Female",
+    "max_income": 250000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Financial empowerment scheme providing vouchers to women in Odisha.",
+    "eligibility_text": "Women citizens of Odisha aged 21 to 60 years.",
+    "benefits": "Rs 5000 per installment twice a year totaling Rs 50,000 over 5 years.",
+    "application_url": "https://subhadra.odisha.gov.in"
+  },
+  {
+    "scheme_name": "PM Vishwakarma Yojana",
+    "scheme_slug": "pm-vishwakarma-yojana",
+    "department": "Ministry of Micro Small & Medium Enterprises",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 18,
+    "max_age": 65,
+    "gender": "All",
+    "max_income": 300000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Artisan",
+      "Self Employed"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Comprehensive support scheme for traditional artisans and craftspeople across India.",
+    "eligibility_text": "Artisans working with hands & tools in 18 traditional trades aged 18+.",
+    "benefits": "Collateral-free enterprise credit up to Rs 3 Lakhs at 5% interest rate + Rs 15,000 tool kit incentive.",
+    "application_url": "https://pmvishwakarma.gov.in"
+  },
+  {
+    "scheme_name": "National Social Assistance Programme (NSAP) Old Age Pension",
+    "scheme_slug": "nsap-old-age-pension",
+    "department": "Ministry of Rural Development",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 60,
+    "max_age": 100,
+    "gender": "All",
+    "max_income": 100000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Monthly pension support for senior citizens belonging to below poverty line households.",
+    "eligibility_text": "BPL senior citizens aged 60 years and above.",
+    "benefits": "Rs 1000 to Rs 1500 monthly pension assistance depending on age tier.",
+    "application_url": "https://nsap.nic.in"
+  },
+  {
+    "scheme_name": "Chief Minister Self Employment Scheme (UP)",
+    "scheme_slug": "cm-self-employment-up",
+    "department": "Department of Micro Small & Medium Enterprises UP",
+    "level": "State",
+    "state_name": "Uttar Pradesh",
+    "min_age": 18,
+    "max_age": 45,
+    "gender": "All",
+    "max_income": 400000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Unemployed",
+      "Artisan",
+      "Self Employed"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Margin money subsidy scheme for educated unemployed youth in Uttar Pradesh to set up business.",
+    "eligibility_text": "Youth aged 18-45 residing in UP with minimum 8th class pass qualification.",
+    "benefits": "Up to 25% project cost subsidy (max Rs 6.25 Lakhs) for setting up micro enterprise.",
+    "application_url": "https://msme.up.gov.in"
+  },
+  {
+    "scheme_name": "Post-Matric Scholarship for ST Students",
+    "scheme_slug": "post-matric-scholarship-st",
+    "department": "Ministry of Tribal Affairs",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 15,
+    "max_age": 30,
+    "gender": "All",
+    "max_income": 250000.0,
+    "is_student_only": true,
+    "target_occupations": [
+      "Student",
+      "All"
+    ],
+    "allowed_categories": [
+      "ST"
+    ],
+    "description": "Financial assistance for ST students pursuing post-secondary education.",
+    "eligibility_text": "ST category students with family annual income up to 2.5 Lakhs enrolled in recognized colleges.",
+    "benefits": "Full reimbursement of tuition fees and book bank allowance.",
+    "application_url": "https://tribal.gov.in"
+  },
+  {
+    "scheme_name": "Stand Up India Scheme",
+    "scheme_slug": "stand-up-india",
+    "department": "Ministry of Finance",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 18,
+    "max_age": 65,
+    "gender": "All",
+    "max_income": 1500000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "Artisan",
+      "Self Employed",
+      "All"
+    ],
+    "allowed_categories": [
+      "SC",
+      "ST",
+      "Female"
+    ],
+    "description": "Bank loans between 10 Lakhs and 1 Crore to SC ST and Women borrowers for greenfield enterprise.",
+    "eligibility_text": "SC/ST and Women entrepreneurs setting up greenfield manufacturing/trading ventures.",
+    "benefits": "Loans from 10 Lakhs to 1 Crore with minimal margin money requirement.",
+    "application_url": "https://www.standupmitra.in"
+  },
+  {
+    "scheme_name": "Pradhan Mantri Matru Vandana Yojana",
+    "scheme_slug": "pm-matru-vandana-yojana",
+    "department": "Ministry of Women and Child Development",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 19,
+    "max_age": 45,
+    "gender": "Female",
+    "max_income": 800000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Maternity benefit program offering cash incentive for pregnant women and lactating mothers.",
+    "eligibility_text": "Pregnant women and lactating mothers aged 19-45 for first live birth.",
+    "benefits": "Cash incentive of Rs 5000 in three installments for health & nutrition support.",
+    "application_url": "https://wcd.nic.in"
+  },
+  {
+    "scheme_name": "Amrit Bharat Station Scheme",
+    "scheme_slug": "amrit-bharat-station",
+    "department": "Ministry of Railways",
+    "level": "Central",
+    "state_name": "All India",
+    "min_age": 18,
+    "max_age": 100,
+    "gender": "All",
+    "max_income": 2000000.0,
+    "is_student_only": false,
+    "target_occupations": [
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Scheme for modernization and master planning of railway stations across the country.",
+    "eligibility_text": "All citizens and commuters using Indian Railways infrastructure.",
+    "benefits": "Upgraded passenger amenities, accessible stations, and modern waiting halls.",
+    "application_url": "https://indianrailways.gov.in"
+  },
+  {
+    "scheme_name": "Mukhyamantri Yuva Swavalamban Yojana (Gujarat)",
+    "scheme_slug": "mysy-gujarat",
+    "department": "Education Department Gujarat",
+    "level": "State",
+    "state_name": "Gujarat",
+    "min_age": 17,
+    "max_age": 25,
+    "gender": "All",
+    "max_income": 600000.0,
+    "is_student_only": true,
+    "target_occupations": [
+      "Student",
+      "All"
+    ],
+    "allowed_categories": [
+      "All"
+    ],
+    "description": "Financial assistance for higher education of bright students in Gujarat.",
+    "eligibility_text": "Students securing 80+ percentile in 10th/12th standard with family income up to 6 Lakhs.",
+    "benefits": "50% tuition fee subsidy up to Rs 2 Lakhs per year + hostel allowance.",
+    "application_url": "https://mysy.guj.nic.in"
+  }
+]
