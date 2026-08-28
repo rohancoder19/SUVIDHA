@@ -1,28 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [email, setEmail] = useState('');
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTarget = searchParams.get('redirect') || '/dashboard';
+  const initialEmail = searchParams.get('email') || '';
+
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const searchParams = new URLSearchParams(location.search);
-  const redirectTarget = searchParams.get('redirect') || '/dashboard';
+  // Auto-redirect authenticated user away from login screen to dashboard
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const userRole = user.role;
+      let target = redirectTarget;
+      if (userRole === 'Officer') {
+        target = '/officer/dashboard';
+      } else if (userRole === 'Admin') {
+        target = '/admin/dashboard';
+      }
+      navigate(target, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, redirectTarget]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const res = await login(email, password);
+    const res = await login(email.trim(), password);
     if (res.success) {
       const userRole = res.user?.role;
       let target = redirectTarget;

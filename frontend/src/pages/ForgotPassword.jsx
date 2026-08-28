@@ -16,7 +16,7 @@ export default function ForgotPassword() {
     setMessage('');
     setError('');
 
-    const res = await forgotPassword(email);
+    const res = await forgotPassword(email.trim());
     if (res.success) {
       setMessage(res.message);
     } else {

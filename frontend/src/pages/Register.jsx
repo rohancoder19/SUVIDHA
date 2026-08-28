@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Lock, Shield, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function Register() {
-  const { register } = useAuth();
+  const { user, isAuthenticated, register } = useAuth();
   const navigate = useNavigate();
 
   const [accountType, setAccountType] = useState('Citizen'); // 'Citizen' or 'Officer'
@@ -22,6 +22,18 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Auto-redirect authenticated user away from register page to dashboard
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const userRole = user.role;
+      let target = '/dashboard';
+      if (userRole === 'Officer' || userRole === 'Admin') {
+        target = '/officer/dashboard';
+      }
+      navigate(target, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -37,9 +49,10 @@ export default function Register() {
       education
     };
 
-    const res = await register(name, email, password, accountType, profileData);
+    const res = await register(name, email.trim(), password, accountType, profileData);
     if (res.success) {
-      if (accountType === 'Officer' || accountType === 'Admin') {
+      const userRole = res.user?.role || 'Citizen';
+      if (userRole === 'Officer' || userRole === 'Admin') {
         navigate('/officer/dashboard', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
@@ -66,9 +79,18 @@ export default function Register() {
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
-            <span>{error}</span>
+          <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs flex flex-col gap-1.5">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
+              <span>{error}</span>
+            </div>
+            {error.includes('already exists') && (
+              <div className="pl-6 pt-1">
+                <Link to={`/login?email=${encodeURIComponent(email)}`} className="text-emerald-400 font-bold hover:underline">
+                  Click here to Sign In with {email} →
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

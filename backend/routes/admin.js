@@ -103,12 +103,13 @@ router.get('/officers', async (req, res) => {
 router.post('/officers', async (req, res) => {
   try {
     const { name, email, password, role, department, state, district } = req.body;
+    const normalizedEmail = email ? String(email).trim().toLowerCase() : '';
 
-    if (!name || !email || !password) {
+    if (!name || !normalizedEmail || !password) {
       return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
       return res.status(400).json({ success: false, error: 'User with this email already exists.' });
     }
@@ -118,7 +119,7 @@ router.post('/officers', async (req, res) => {
 
     const newOfficer = new User({
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       password: hashedPassword,
       role: role === 'Admin' ? 'Admin' : 'Officer',
       profile: {

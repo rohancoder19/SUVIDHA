@@ -137,6 +137,29 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Startup Migration: Safely normalize all pre-existing user email records
+const migrateUserEmails = async () => {
+  try {
+    const users = await User.find({});
+    let count = 0;
+    for (const u of users) {
+      if (u.email) {
+        const normalized = u.email.trim().toLowerCase();
+        if (u.email !== normalized) {
+          u.email = normalized;
+          await u.save();
+          count++;
+        }
+      }
+    }
+    if (count > 0) {
+      console.log(`[MIGRATION] Successfully normalized ${count} user email(s) in database.`);
+    }
+  } catch (err) {
+    console.warn('[MIGRATION] Email migration warning:', err.message);
+  }
+};
+
 // Connect to MongoDB with Memory Server fallback
 const connectDB = async () => {
   const mongoUri = process.env.MONGODB_URI;
@@ -152,6 +175,7 @@ const connectDB = async () => {
       await mongoose.connection.db.admin().ping();
       console.log('MongoDB Atlas Connected and Pinged Successfully!');
       isConnected = true;
+      await migrateUserEmails();
     } catch (err) {
       console.warn('MongoDB Atlas connection/ping failed due to network/DNS issues:', err.message);
       await mongoose.disconnect().catch(() => {});
@@ -265,7 +289,7 @@ const connectDB = async () => {
           {
             referenceNumber: 'SUV-2026-392014',
             user: citizen._id,
-            category: 'Scholarship Issue',
+            category: 'Scholarship',
             schemeName: 'Post Matric Scholarship for OBC Students',
             department: 'Department of Social Justice & Empowerment',
             state: 'Madhya Pradesh',

@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
         const isRestoreReq = error.config?.headers?.['x-restore-session'];
         const reqUrl = error.config?.url || '';
 
-        if (error.response && error.response.status === 401 && !isRestoreReq && !reqUrl.includes('/api/auth/login')) {
+        if (error.response && error.response.status === 401 && !isRestoreReq && !reqUrl.includes('/api/auth/login') && !reqUrl.includes('/api/auth/register')) {
           setUser(null);
           setToken(null);
           localStorage.removeItem('suvidha_token');
@@ -76,29 +76,49 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
 
+  const normalizeEmail = (e) => (e ? String(e).trim().toLowerCase() : '');
+
   const login = async (email, password) => {
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
+      const cleanEmail = normalizeEmail(email);
+      const res = await axios.post('/api/auth/login', { email: cleanEmail, password });
       if (res.data.success) {
         setToken(res.data.token);
         setUser(res.data.user);
-        return { success: true };
+        return { success: true, user: res.data.user };
       }
     } catch (err) {
+      if (!err.response) {
+        return { success: false, error: 'Unable to connect to server. Please check backend connection.' };
+      }
+      const serverErr = err.response?.data?.error || err.response?.data?.message;
+      if (err.response.status === 401) {
+        return { success: false, error: serverErr || 'Invalid email or password.' };
+      }
+      if (err.response.status === 403) {
+        return { success: false, error: serverErr || 'Access denied. Account not authorized.' };
+      }
+      if (err.response.status === 404) {
+        return { success: false, error: 'API endpoint not found (404).' };
+      }
+      if (err.response.status >= 500) {
+        return { success: false, error: serverErr || 'Server error. Please try again later.' };
+      }
       return {
         success: false,
-        error: err.response?.data?.error || err.response?.data?.message || 'Invalid email or password.'
+        error: serverErr || 'Authentication failed.'
       };
     }
   };
 
   const register = async (name, email, password, role, profile) => {
     try {
-      const res = await axios.post('/api/auth/register', { name, email, password, role, profile });
+      const cleanEmail = normalizeEmail(email);
+      const res = await axios.post('/api/auth/register', { name: (name || '').trim(), email: cleanEmail, password, role, profile });
       if (res.data.success) {
         setToken(res.data.token);
         setUser(res.data.user);
-        return { success: true };
+        return { success: true, user: res.data.user };
       }
     } catch (err) {
       return {
@@ -110,7 +130,8 @@ export const AuthProvider = ({ children }) => {
 
   const forgotPassword = async (email) => {
     try {
-      const res = await axios.post('/api/auth/forgot-password', { email });
+      const cleanEmail = normalizeEmail(email);
+      const res = await axios.post('/api/auth/forgot-password', { email: cleanEmail });
       return { success: true, message: res.data.message };
     } catch (err) {
       return { success: false, error: err.response?.data?.error || 'Failed to send password reset request.' };
