@@ -28,23 +28,23 @@ class RAGEngine:
             except Exception as e:
                 print(f"Gemini config notice: {e}")
 
-        self._init_vector_store()
+        self._initialized = False
 
     def _init_vector_store(self):
-        if not HAS_CHROMADB:
-            print("ChromaDB not installed. Using in-memory dataset search fallback.")
+        if not HAS_CHROMADB or self._initialized:
             return
 
         try:
             self.chroma_client = chromadb.Client()
             self.collection = self.chroma_client.get_or_create_collection(name="welfare_schemes")
             
-            # Check if collection is empty
             if self.collection.count() == 0 and self.schemes:
                 documents = []
                 metadatas = []
                 ids = []
-                for idx, s in enumerate(self.schemes):
+                total = min(500, len(self.schemes))
+                for idx in range(total):
+                    s = self.schemes[idx]
                     text = f"Scheme: {s.get('scheme_name')}\nDepartment: {s.get('department')}\nLevel: {s.get('level')} ({s.get('state_name')})\nEligibility: {s.get('eligibility_text')}\nBenefits: {s.get('benefits')}\nDescription: {s.get('description')}"
                     documents.append(text)
                     metadatas.append({
@@ -54,16 +54,20 @@ class RAGEngine:
                     })
                     ids.append(f"scheme_{idx}")
 
-                self.collection.add(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids
-                )
+                batch_size = 100
+                for b_i in range(0, len(documents), batch_size):
+                    self.collection.add(
+                        documents=documents[b_i:b_i+batch_size],
+                        metadatas=metadatas[b_i:b_i+batch_size],
+                        ids=ids[b_i:b_i+batch_size]
+                    )
                 print(f"ChromaDB initialized with {len(documents)} documents.")
+            self._initialized = True
         except Exception as e:
             print(f"Vector Store initialization notice: {e}")
 
     def query_schemes(self, query_text: str, top_k: int = 3) -> List[Dict[str, Any]]:
+        self._init_vector_store()
         query_text_lower = query_text.lower()
         results = []
 
