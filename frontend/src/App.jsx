@@ -44,17 +44,15 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-              {/* Public Unauthenticated Tracking Routes */}
-              <Route path="/grievances/track" element={<GrievancePortal />} />
-              <Route path="/track" element={<GrievancePortal />} />
-
-              {/* Protected Application Routes (Requires Verified Session) */}
+              {/* Protected Application Routes (Requires Verified Authentication Session) */}
               <Route path="/" element={<ProtectedRoute><Home onOpenChat={() => setIsChatOpen(true)} /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/finder" element={<ProtectedRoute><WelfareFinder /></ProtectedRoute>} />
               <Route path="/schemes" element={<ProtectedRoute><WelfareFinder /></ProtectedRoute>} />
               <Route path="/tracker" element={<ProtectedRoute><ApplicationTracker /></ProtectedRoute>} />
               <Route path="/grievances" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
+              <Route path="/grievances/track" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
+              <Route path="/track" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
               <Route path="/complaint" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
               <Route path="/complaints" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
               <Route path="/grievances/create" element={<ProtectedRoute><FileGrievance /></ProtectedRoute>} />
