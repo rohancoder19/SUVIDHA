@@ -264,10 +264,16 @@ router.get('/officer/queue', auth, requireRole(['Officer', 'Admin']), async (req
     if (req.user.role === 'Officer') {
       const officerDept = req.user.profile?.occupation || '';
       query = {
-        $or: [
-          { assignedOfficer: req.user._id },
-          { department: { $regex: new RegExp(officerDept, 'i') } },
-          { assignedDepartment: { $regex: new RegExp(officerDept, 'i') } }
+        $and: [
+          // Exclude newly submitted grievances until Admin assigns them
+          { status: { $nin: ['SUBMITTED', 'UNDER_REVIEW'] } },
+          {
+            $or: [
+              { assignedOfficer: req.user._id },
+              { department: { $regex: new RegExp(officerDept, 'i') } },
+              { assignedDepartment: { $regex: new RegExp(officerDept, 'i') } }
+            ]
+          }
         ]
       };
     }

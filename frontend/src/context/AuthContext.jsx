@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Configure Axios to use the correct API Base URL from environment variables
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
 // Configure Axios to send HTTP-Only cookies with every request
 axios.defaults.withCredentials = true;
 

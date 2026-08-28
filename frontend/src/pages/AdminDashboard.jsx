@@ -6,11 +6,12 @@ import { ShieldAlert, CheckCircle2, Clock, AlertTriangle, Filter, Search, Edit, 
 export default function AdminDashboard() {
   const { user } = useAuth();
   
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('grievances');
   const [analytics, setAnalytics] = useState(null);
   const [grievances, setGrievances] = useState([]);
   const [officers, setOfficers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
 
   // Assign Modal State
   const [selectedGrievance, setSelectedGrievance] = useState(null);
@@ -59,6 +60,7 @@ export default function AdminDashboard() {
 
   const fetchAdminGrievances = async () => {
     setLoading(true);
+    setFetchError('');
     try {
       const res = await axios.get('/api/admin/grievances');
       if (res.data && res.data.grievances) {
@@ -66,6 +68,7 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error('Admin grievances fetch error:', err);
+      setFetchError('Unable to load grievances. Please check the server connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -313,6 +316,10 @@ export default function AdminDashboard() {
                 {loading ? (
                   <tr>
                     <td colSpan="7" className="p-6 text-center text-slate-400">Loading master grievance records...</td>
+                  </tr>
+                ) : fetchError ? (
+                  <tr>
+                    <td colSpan="7" className="p-6 text-center text-rose-500 font-bold">{fetchError}</td>
                   </tr>
                 ) : grievances.length === 0 ? (
                   <tr>

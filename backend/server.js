@@ -120,13 +120,27 @@ app.get('/health', (req, res) => {
 
 // Connect to MongoDB with Memory Server fallback
 const connectDB = async () => {
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/suvidha';
-  try {
-    console.log(`Attempting MongoDB connection at ${mongoUri}...`);
-    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 3000 });
-    console.log('MongoDB Connected Successfully to Atlas / local instance.');
-  } catch (err) {
-    console.warn('Local MongoDB daemon unavailable. Booting in-memory MongoDB server fallback...');
+  const mongoUri = process.env.MONGODB_URI;
+  let isConnected = false;
+
+  if (mongoUri) {
+    try {
+      console.log(`Attempting MongoDB Atlas connection...`);
+      await mongoose.connect(mongoUri, { 
+        serverSelectionTimeoutMS: 2500,
+        family: 4
+      });
+      await mongoose.connection.db.admin().ping();
+      console.log('MongoDB Atlas Connected and Pinged Successfully!');
+      isConnected = true;
+    } catch (err) {
+      console.warn('MongoDB Atlas connection/ping failed due to network/DNS issues:', err.message);
+      await mongoose.disconnect().catch(() => {});
+    }
+  }
+
+  if (!isConnected) {
+    console.warn('Booting ultra-fast, reliable In-Memory MongoDB Server fallback...');
     try {
       const { MongoMemoryServer } = require('mongodb-memory-server');
       const mongoServer = await MongoMemoryServer.create();
@@ -171,6 +185,7 @@ const connectDB = async () => {
       const adminPass = await bcrypt.hash('Admin@123', salt);
       const officerPass = await bcrypt.hash('Officer@123', salt);
       const citizenPass = await bcrypt.hash('Citizen@123', salt);
+      const userPass = await bcrypt.hash('Password@123', salt);
 
       const createdUsers = await User.insertMany([
         {
@@ -193,6 +208,13 @@ const connectDB = async () => {
           password: citizenPass,
           role: 'Citizen',
           profile: { state: 'Madhya Pradesh', age: 28, gender: 'Male', income: 180000, category: 'OBC', isStudent: false, occupation: 'Farmer', pincode: '462003' }
+        },
+        {
+          name: 'Rohan User',
+          email: 'rohan@gmail.com',
+          password: userPass,
+          role: 'Citizen',
+          profile: { state: 'West Bengal', age: 24, gender: 'Male', income: 250000, category: 'General', isStudent: false, occupation: 'Student', pincode: '700001' }
         }
       ]);
       console.log('Auto-seeded default user credentials into in-memory MongoDB.');

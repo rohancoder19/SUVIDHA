@@ -14,6 +14,7 @@ export default function OfficerDashboard() {
   const [grievances, setGrievances] = useState([]);
   const [selectedGrievance, setSelectedGrievance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [filterPriority, setFilterPriority] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,6 +33,7 @@ export default function OfficerDashboard() {
 
   const fetchOfficerGrievances = async () => {
     setLoading(true);
+    setFetchError('');
     try {
       const endpoint = user?.role === 'Admin' ? '/api/admin/grievances' : '/api/grievances/officer/queue';
       const res = await axios.get(endpoint);
@@ -44,6 +46,7 @@ export default function OfficerDashboard() {
       }
     } catch (err) {
       console.error('Error fetching officer queue:', err);
+      setFetchError('Unable to load grievances. Please check the server connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -295,6 +298,10 @@ export default function OfficerDashboard() {
               {loading ? (
                 <tr>
                   <td colSpan="7" className="p-6 text-center text-slate-500">Loading live grievance queue from database...</td>
+                </tr>
+              ) : fetchError ? (
+                <tr>
+                  <td colSpan="7" className="p-6 text-center text-rose-500 font-bold">{fetchError}</td>
                 </tr>
               ) : filteredGrievances.length === 0 ? (
                 <tr>
