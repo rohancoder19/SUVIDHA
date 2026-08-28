@@ -32,6 +32,8 @@ export default function Profile() {
 
     const res = await updateProfile({ name, profile });
     setLoading(false);
+
+
     if (res?.success) {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -41,7 +43,7 @@ export default function Profile() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
       <div className="glass-panel p-8 rounded-3xl border border-slate-800 space-y-6">
-        
+
         <div className="flex items-center space-x-4 pb-6 border-b border-slate-800">
           <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-teal-500 flex items-center justify-center text-2xl font-black text-teal-400">
             {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -63,7 +65,7 @@ export default function Profile() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          
+
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-300">Full Name</label>
             <input

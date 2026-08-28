@@ -5,8 +5,8 @@ const grievanceHistorySchema = new mongoose.Schema({
   referenceNumber: { type: String, required: true, index: true },
   actor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   actorName: { type: String, default: 'System' },
-  actorRole: { type: String, enum: ['Citizen', 'Officer', 'Admin', 'System'], default: 'System' },
-  action: { type: String, required: true }, // e.g. CREATED, ASSIGNED, STATUS_CHANGE, PRIORITY_OVERRIDE, REMARK_ADDED, CLARIFICATION_SUBMITTED, RESOLVED, ESCALATED, REOPENED
+  actorRole: { type: String, default: 'System' },
+  action: { type: String, default: 'STATUS_UPDATED' },
   oldStatus: { type: String, default: '' },
   newStatus: { type: String, default: '' },
   comment: { type: String, default: '' },

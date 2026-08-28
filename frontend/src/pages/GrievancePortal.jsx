@@ -10,111 +10,6 @@ import {
 import { useAuth } from '../context/AuthContext';
 import AIGrievanceAssistantModal from '../components/AIGrievanceAssistantModal';
 
-const DEFAULT_DEMO_GRIEVANCES = [
-  {
-    _id: 'g1',
-    referenceNumber: 'SUV-2026-88912',
-    subject: 'water not comming for 7 dayes',
-    category: 'Water Supply',
-    subcategory: 'Water Services',
-    priority: 'MEDIUM',
-    urgencyScore: 38,
-    confidenceScore: 94,
-    slaHours: 120,
-    slaStatus: 'RESOLVED',
-    status: 'RESOLVED',
-    department: 'City Water & Sewerage Board Field Unit',
-    description: 'water not comming for 7 dayes in civic ward lane 4.',
-    address: 'Location (22.6572°, 88.3887°), Civic Ward',
-    aiReason: 'Routine public inquiry or minor maintenance complaint. Potential essential utility disruption.',
-    aiRecommendation: 'Dispatch municipal plumbing crew to check main distribution valve.',
-    latitude: 22.6572,
-    longitude: 88.3887,
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-    statusHistory: [
-      {
-        status: 'SUBMITTED',
-        remark: 'Grievance submitted via Citizen Web Portal. Department: Public Citizen Portal',
-        updatedByName: 'Rohan',
-        updatedByRole: 'Citizen',
-        timestamp: new Date(Date.now() - 3600000 * 48).toISOString()
-      },
-      {
-        status: 'AI_ANALYZED',
-        remark: 'AI Classified: Water (Water Services) | Priority: HIGH (38/100 Urgency) | SLA: 120h.',
-        updatedByName: 'Civic AI System',
-        updatedByRole: 'Civic AI System',
-        timestamp: new Date(Date.now() - 3600000 * 48).toISOString()
-      },
-      {
-        status: 'ASSIGNED',
-        remark: "Human-in-the-Loop Override: Category 'Water', Priority 'MEDIUM', Department 'City Water & Sewerage Board Field Unit', SLA 120h.",
-        updatedByName: 'Rahul',
-        updatedByRole: 'Admin Officer',
-        timestamp: new Date(Date.now() - 3600000 * 24).toISOString()
-      },
-      {
-        status: 'RESOLVED',
-        remark: 'Field valve repair completed. Water supply restored.',
-        updatedByName: 'Rahul',
-        updatedByRole: 'Nodal Officer',
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString()
-      }
-    ]
-  },
-  {
-    _id: 'g2',
-    referenceNumber: 'SUV-2026-90214',
-    subject: 'Road Problem urgent',
-    category: 'Road & Infrastructure',
-    subcategory: 'Pothole Repair',
-    priority: 'HIGH',
-    urgencyScore: 87,
-    confidenceScore: 94,
-    slaHours: 48,
-    slaStatus: 'RESOLVED',
-    status: 'RESOLVED',
-    department: 'Public Works Department (PWD) Field Unit',
-    description: 'Type of Damage: Deep potholes, severe cracking, missing manhole covers, or road collapse. Safety Risks: High risk of vehicle damage, skidding, pedestrian hazards.',
-    address: 'Dunlop, Baranagar, Kolkata Metropolitan Area, Barrackpore',
-    aiReason: 'Urgent infrastructure defect causing safety hazards to commuters.',
-    aiRecommendation: 'Deploy PWD emergency asphalt patch team within 24-48 hours.',
-    latitude: 22.6521,
-    longitude: 88.3712,
-    createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
-    statusHistory: [
-      {
-        status: 'SUBMITTED',
-        remark: 'Grievance submitted via Citizen Web Portal.',
-        updatedByName: 'Rohan',
-        updatedByRole: 'Citizen',
-        timestamp: new Date(Date.now() - 3600000 * 72).toISOString()
-      },
-      {
-        status: 'AI_ANALYZED',
-        remark: 'AI Classified as Road (Pothole Repair) with HIGH priority (87/100 Urgency).',
-        updatedByName: 'Civic AI System',
-        updatedByRole: 'Civic AI System',
-        timestamp: new Date(Date.now() - 3600000 * 72).toISOString()
-      },
-      {
-        status: 'ASSIGNED',
-        remark: 'Assigned to Public Works Department (PWD) Field Unit.',
-        updatedByName: 'Rahul',
-        updatedByRole: 'Admin Officer',
-        timestamp: new Date(Date.now() - 3600000 * 48).toISOString()
-      },
-      {
-        status: 'RESOLVED',
-        remark: 'PWD patch work finished successfully.',
-        updatedByName: 'Rahul',
-        updatedByRole: 'Nodal Officer',
-        timestamp: new Date(Date.now() - 3600000 * 12).toISOString()
-      }
-    ]
-  }
-];
-
 export default function GrievancePortal() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -127,10 +22,11 @@ export default function GrievancePortal() {
   });
 
   // Grievance Queue & Active Selected Grievance
-  const [grievances, setGrievances] = useState(DEFAULT_DEMO_GRIEVANCES);
-  const [selectedGrievance, setSelectedGrievance] = useState(DEFAULT_DEMO_GRIEVANCES[0]);
+  const [grievances, setGrievances] = useState([]);
+  const [selectedGrievance, setSelectedGrievance] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchRefQuery, setSearchRefQuery] = useState('');
+  const [searchError, setSearchError] = useState('');
 
   // Form State
   const [category, setCategory] = useState('Road & Infrastructure');
@@ -154,20 +50,47 @@ export default function GrievancePortal() {
     const refParam = params.get('ref');
     if (refParam) {
       setSearchRefQuery(refParam);
+      trackByReferenceNumber(refParam);
     }
   }, [isAuthenticated, location.search]);
 
   const fetchMyGrievances = async () => {
-    if (!isAuthenticated) return;
     setLoading(true);
     try {
       const res = await axios.get('/api/grievances/my-grievances');
       if (res.data.success && res.data.grievances && res.data.grievances.length > 0) {
         setGrievances(res.data.grievances);
         setSelectedGrievance(res.data.grievances[0]);
+      } else {
+        // If logged out or no personal grievances yet, fetch all public seeded grievances for tracking demo
+        trackByReferenceNumber('SUV-2026-000003');
       }
     } catch (err) {
-      console.error('Using initial demo tracker:', err);
+      console.warn('My grievances endpoint notice:', err.message);
+      trackByReferenceNumber('SUV-2026-000003');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const trackByReferenceNumber = async (refNum) => {
+    if (!refNum) return;
+    setLoading(true);
+    setSearchError('');
+
+    try {
+      const res = await axios.get(`/api/grievances/track/${refNum.trim().toUpperCase()}`);
+      if (res.data && res.data.grievance) {
+        setSelectedGrievance(res.data.grievance);
+        
+        // Append to list if not present
+        setGrievances(prev => {
+          const exists = prev.some(g => g._id === res.data.grievance._id || g.referenceNumber === res.data.grievance.referenceNumber);
+          return exists ? prev.map(g => g.referenceNumber === res.data.grievance.referenceNumber ? res.data.grievance : g) : [res.data.grievance, ...prev];
+        });
+      }
+    } catch (err) {
+      setSearchError(err.response?.data?.error || `No grievance found matching reference ${refNum}`);
     } finally {
       setLoading(false);
     }
@@ -180,16 +103,7 @@ export default function GrievancePortal() {
   const handleSearchRef = (e) => {
     e.preventDefault();
     if (!searchRefQuery.trim()) return;
-
-    const matched = grievances.find(g =>
-      (g.referenceNumber || '').toLowerCase().includes(searchRefQuery.trim().toLowerCase())
-    );
-
-    if (matched) {
-      setSelectedGrievance(matched);
-    } else {
-      alert(`No registered grievance found matching "${searchRefQuery}".`);
-    }
+    trackByReferenceNumber(searchRefQuery);
   };
 
   const handleApplyAiClassification = (aiData) => {
@@ -247,6 +161,7 @@ export default function GrievancePortal() {
         return 4;
       case 'ACTION_TAKEN':
       case 'ACTION_REQUIRED':
+      case 'NEED_CLARIFICATION':
         return 5;
       case 'RESOLVED':
       case 'CLOSED':
@@ -298,14 +213,19 @@ export default function GrievancePortal() {
         return <span className="px-3 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-500/40 font-bold text-[10px] uppercase">Rejected</span>;
       case 'IN_PROGRESS':
       case 'ASSIGNED':
+      case 'ACTION_TAKEN':
         return <span className="px-3 py-1 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-500/40 font-bold text-[10px] uppercase">In Progress</span>;
+      case 'NEED_CLARIFICATION':
+        return <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-500/40 font-bold text-[10px] uppercase">Need Clarification</span>;
+      case 'ESCALATED':
+        return <span className="px-3 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-500/40 font-bold text-[10px] uppercase animate-pulse">Escalated</span>;
       default:
         return <span className="px-3 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-500/40 font-bold text-[10px] uppercase">Submitted</span>;
     }
   };
 
   const activeGrievance = selectedGrievance || grievances[0];
-  const currentStepIndex = getStepperActiveIndex(activeGrievance?.status);
+  const currentStepIndex = activeGrievance ? getStepperActiveIndex(activeGrievance.status) : 1;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 bg-[#070d17] text-slate-100 min-h-screen">
@@ -321,7 +241,7 @@ export default function GrievancePortal() {
             Live Grievance & AI Triage Tracker
           </h1>
           <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-            Track automated AI triage results, officer dispatch logs, department assignments, and resolution SLAs.
+            Track automated AI triage results, officer dispatch logs, department assignments, and resolution SLAs directly from MongoDB Atlas.
           </p>
         </div>
 
@@ -331,10 +251,35 @@ export default function GrievancePortal() {
             className="px-4 py-2.5 rounded-2xl bg-[#070d17] border border-[#1e293b] text-slate-300 hover:text-white font-bold text-xs flex items-center space-x-2 shadow-md"
           >
             <RefreshCw className="w-4 h-4 text-cyan-400" />
-            <span>Refresh Status</span>
+            <span>Refresh Live Database</span>
           </button>
         </div>
       </div>
+
+      {/* SEARCH BAR FOR TRACKING SPECIFIC REFERENCE ID */}
+      <form onSubmit={handleSearchRef} className="bg-[#0e1726] border border-[#1e293b] p-3 rounded-2xl flex gap-2 shadow-xl">
+        <input
+          type="text"
+          value={searchRefQuery}
+          onChange={(e) => setSearchRefQuery(e.target.value)}
+          placeholder="Enter Grievance Reference ID (e.g. SUV-2026-000003)"
+          className="flex-1 px-4 py-2.5 rounded-xl bg-[#070d17] border border-[#1e293b] text-xs font-mono uppercase text-white placeholder-slate-500"
+        />
+        <button
+          type="submit"
+          className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center space-x-1.5 shadow-md"
+        >
+          <Search className="w-4 h-4" />
+          <span>Track Status</span>
+        </button>
+      </form>
+
+      {searchError && (
+        <div className="p-3.5 rounded-xl bg-rose-950/80 text-rose-400 border border-rose-500/40 text-xs font-bold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{searchError}</span>
+        </div>
+      )}
 
       {/* NAVIGATION TABS */}
       <div className="flex items-center space-x-2 border-b border-[#1e293b] pb-2">
@@ -376,70 +321,70 @@ export default function GrievancePortal() {
 
             {/* List of Grievance Cards */}
             <div className="space-y-3 max-h-[750px] overflow-y-auto pr-1">
-              {grievances.map((g) => {
-                const isSelected = activeGrievance?._id === g._id;
-                return (
-                  <div
-                    key={g._id}
-                    onClick={() => handleSelectGrievance(g)}
-                    className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
-                      isSelected
-                        ? 'bg-[#0e1726] border-emerald-500/60 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-500/40'
-                        : 'bg-[#0e1726]/60 border-[#1e293b] hover:border-slate-700'
-                    }`}
-                  >
-                    {/* Top Badges Row */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 font-extrabold text-[10px] uppercase">
-                        {g.category}
-                      </span>
-                      <div className="flex items-center space-x-1.5">
-                        {getPriorityBadge(g.priority, g.urgencyScore)}
-                        {getStatusBadge(g.status)}
+              {loading ? (
+                <div className="text-center py-12 text-xs text-slate-500">Loading grievances from database...</div>
+              ) : grievances.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-[#0e1726] text-center text-xs text-slate-400 italic border border-[#1e293b]">
+                  No grievances found. Try searching a reference ID like SUV-2026-000003 above.
+                </div>
+              ) : (
+                grievances.map((g) => {
+                  const isSelected = activeGrievance?._id === g._id || activeGrievance?.referenceNumber === g.referenceNumber;
+                  return (
+                    <div
+                      key={g._id || g.referenceNumber}
+                      onClick={() => handleSelectGrievance(g)}
+                      className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
+                        isSelected
+                          ? 'bg-[#0e1726] border-emerald-500/60 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-500/40'
+                          : 'bg-[#0e1726]/60 border-[#1e293b] hover:border-slate-700'
+                      }`}
+                    >
+                      {/* Top Badges Row */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 font-extrabold text-[10px] uppercase">
+                          {g.category}
+                        </span>
+                        <div className="flex items-center space-x-1.5">
+                          {getPriorityBadge(g.priority, g.urgencyScore)}
+                          {getStatusBadge(g.status)}
+                        </div>
+                      </div>
+
+                      {/* Title & Description */}
+                      <div>
+                        <h3 className="font-extrabold text-sm text-white leading-snug line-clamp-1">
+                          {g.subject || g.title}
+                        </h3>
+                        <p className="text-xs text-slate-400 line-clamp-2 mt-1 font-medium">
+                          {g.description}
+                        </p>
+                      </div>
+
+                      {/* Location & Department Metadata */}
+                      <div className="space-y-1 text-[11px] text-slate-400 border-t border-[#1e293b]/60 pt-2.5">
+                        <div className="flex items-center space-x-1.5 truncate text-slate-400">
+                          <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <span className="truncate">{g.address || 'Location registered'}</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 truncate text-cyan-400 font-semibold">
+                          <Building className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span className="truncate">{g.department || 'Nodal Department'}</span>
+                        </div>
+                      </div>
+
+                      {/* Footer Row */}
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                        <span className="font-mono">#{g.referenceNumber}</span>
+                        <span className="text-indigo-400 font-extrabold flex items-center space-x-1">
+                          <span>Track Live Timeline</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </span>
                       </div>
                     </div>
-
-                    {/* Title & Description */}
-                    <div>
-                      <h3 className="font-extrabold text-sm text-white leading-snug line-clamp-1">
-                        {g.subject || g.title}
-                      </h3>
-                      <p className="text-xs text-slate-400 line-clamp-2 mt-1 font-medium">
-                        {g.description}
-                      </p>
-                    </div>
-
-                    {/* Location & Department Metadata */}
-                    <div className="space-y-1 text-[11px] text-slate-400 border-t border-[#1e293b]/60 pt-2.5">
-                      <div className="flex items-center space-x-1.5 truncate text-slate-400">
-                        <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                        <span className="truncate">{g.address || 'Location registered via Mobile GPS'}</span>
-                      </div>
-                      <div className="flex items-center space-x-1.5 truncate text-cyan-400 font-semibold">
-                        <Building className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <span className="truncate">{g.department || 'Public Works Department (PWD)'}</span>
-                      </div>
-                    </div>
-
-                    {/* AI Triage Alert Pill */}
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-300 flex items-center space-x-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span className="truncate">
-                        AI Triage: Classified as {g.category} with {g.priority} priority ({g.urgencyScore || 50}/100 Urgency)
-                      </span>
-                    </div>
-
-                    {/* Footer Row */}
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                      <span className="font-mono">{new Date(g.createdAt).toLocaleDateString()}</span>
-                      <span className="text-indigo-400 font-extrabold flex items-center space-x-1">
-                        <span>Track Live Timeline</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -473,7 +418,7 @@ export default function GrievancePortal() {
                     <span>Resolution SLA Guarantee: {activeGrievance.slaHours || 120} Hours</span>
                   </div>
                   <span className="font-extrabold uppercase text-emerald-400 tracking-wider">
-                    {activeGrievance.slaStatus || 'ACTIVE'}
+                    {activeGrievance.status === 'RESOLVED' || activeGrievance.status === 'CLOSED' ? 'RESOLVED' : (activeGrievance.slaStatus || 'ACTIVE')}
                   </span>
                 </div>
 
@@ -521,7 +466,7 @@ export default function GrievancePortal() {
                       <span>AI GRIEVANCE TRIAGE EXPLANATION</span>
                     </span>
                     <span className="px-2.5 py-0.5 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 text-[10px] font-extrabold">
-                      AI Confidence: {activeGrievance.confidenceScore || 94}%
+                      Urgency Score: {activeGrievance.urgencyScore || 50}/100
                     </span>
                   </div>
 
@@ -530,28 +475,18 @@ export default function GrievancePortal() {
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Why {activeGrievance.priority || 'MEDIUM'} Priority?
                     </div>
-                    <ul className="text-xs text-slate-300 space-y-1 font-medium">
-                      <li className="flex items-center space-x-2">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>{activeGrievance.aiReason || 'Routine public inquiry or infrastructure maintenance complaint.'}</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Potential essential utility disruption requiring nodal officer dispatch.</span>
-                      </li>
-                    </ul>
+                    <p className="text-xs text-slate-300 font-medium">
+                      {activeGrievance.aiReason || 'Public infrastructure inquiry or utility maintenance complaint.'}
+                    </p>
                   </div>
 
                   {/* Why Department */}
                   <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Why {activeGrievance.department || 'City Water & Sewerage Board'}?
+                      Assigned Nodal Department
                     </div>
                     <div className="text-xs font-bold text-cyan-400">
-                      {activeGrievance.department || 'City Water & Sewerage Board'}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      Reason: Complaint concerns {activeGrievance.category} issues.
+                      {activeGrievance.department || 'Public Works Department (PWD)'}
                     </div>
                   </div>
                 </div>
@@ -564,7 +499,7 @@ export default function GrievancePortal() {
                     </span>
                     <div className="font-bold text-emerald-400 flex items-center space-x-2 pt-1">
                       <Building className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>{activeGrievance.department || 'City Water & Sewerage Board Field Unit'}</span>
+                      <span>{activeGrievance.department || 'Municipal Nodal Unit'}</span>
                     </div>
                   </div>
 
@@ -574,12 +509,12 @@ export default function GrievancePortal() {
                     </span>
                     <div className="font-bold text-slate-200 flex items-center space-x-2 pt-1">
                       <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
-                      <span className="truncate">{activeGrievance.address || 'Location (22.6572°, 88.3887°), Civic Ward'}</span>
+                      <span className="truncate">{activeGrievance.address || 'Location registered via GPS'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* PERMANENT AUDITABLE ACTION LOGS (IMMUTABLE AUDIT TRAIL) */}
+                {/* PERMANENT AUDITABLE ACTION LOGS (IMMUTABLE AUDIT TRAIL FROM MONGO DB) */}
                 <div className="space-y-4 pt-2">
                   <div className="flex items-center justify-between border-b border-[#1e293b] pb-3">
                     <span className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -605,7 +540,7 @@ export default function GrievancePortal() {
                             </span>
                             <div className="flex items-center space-x-2">
                               <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
-                                {log.updatedByRole || 'System'}
+                                {log.updatedByRole || 'Nodal Officer'}
                               </span>
                               <span className="text-[10px] text-slate-400 font-mono">
                                 {new Date(log.timestamp).toLocaleString()}
@@ -618,7 +553,7 @@ export default function GrievancePortal() {
                           </p>
 
                           <div className="text-[10px] text-slate-500 pt-1">
-                            Actor: <strong>{log.updatedByName || 'Civic AI System'}</strong>
+                            Actor: <strong>{log.updatedByName || 'Admin/System'}</strong>
                           </div>
                         </div>
                       ))
@@ -656,7 +591,7 @@ export default function GrievancePortal() {
 
               <div className="flex justify-center space-x-3 pt-4">
                 <button
-                  onClick={() => { setSearchRefQuery(submittedRef); setActiveTab('tracker'); }}
+                  onClick={() => { setSearchRefQuery(submittedRef); setActiveTab('tracker'); trackByReferenceNumber(submittedRef); }}
                   className="px-6 py-3 bg-emerald-500 text-slate-950 hover:bg-emerald-400 rounded-2xl font-extrabold text-xs flex items-center space-x-2 shadow-lg shadow-emerald-500/20"
                 >
                   <Search className="w-4 h-4" />
@@ -669,7 +604,7 @@ export default function GrievancePortal() {
               <div className="flex items-center justify-between border-b border-[#1e293b] pb-4">
                 <div>
                   <h2 className="text-xl font-extrabold font-outfit text-white">File a Civic Grievance</h2>
-                  <p className="text-xs text-slate-400">All submitted grievances are routed to district nodal officers.</p>
+                  <p className="text-xs text-slate-400">All submitted grievances are routed directly to MongoDB Atlas & nodal officers.</p>
                 </div>
                 <button
                   type="button"

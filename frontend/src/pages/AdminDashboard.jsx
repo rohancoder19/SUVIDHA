@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { ShieldAlert, CheckCircle2, Clock, AlertTriangle, Filter, Search, Edit, Lock, Users, Layers, Award, ThumbsUp, Plus, X, BarChart3, UserCheck, AlertCircle } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, Clock, AlertTriangle, Filter, Search, Edit, Lock, Users, Layers, Award, ThumbsUp, Plus, X, BarChart3, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -18,7 +18,27 @@ export default function AdminDashboard() {
   const [assignOfficerId, setAssignOfficerId] = useState('');
   const [assignRemark, setAssignRemark] = useState('');
   const [assigning, setAssigning] = useState(false);
-  const [assignSuccess, setAssignSuccess] = useState('');
+
+  // Update Status Modal State
+  const [statusModalGrievance, setStatusModalGrievance] = useState(null);
+  const [newStatus, setNewStatus] = useState('IN_PROGRESS');
+  const [statusComment, setStatusComment] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusUpdateMessage, setStatusUpdateMessage] = useState('');
+
+  const VALID_STATUSES = [
+    'SUBMITTED',
+    'UNDER_REVIEW',
+    'ASSIGNED',
+    'IN_PROGRESS',
+    'ACTION_TAKEN',
+    'RESOLVED',
+    'CLOSED',
+    'NEED_CLARIFICATION',
+    'ESCALATED',
+    'REOPENED',
+    'REJECTED'
+  ];
 
   useEffect(() => {
     fetchAnalytics();
@@ -62,12 +82,45 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleOpenStatusModal = (g) => {
+    setStatusModalGrievance(g);
+    setNewStatus(g.status || 'IN_PROGRESS');
+    setStatusComment('');
+    setStatusUpdateMessage('');
+  };
+
+  const handleStatusSubmit = async (e) => {
+    e.preventDefault();
+    if (!statusModalGrievance) return;
+
+    setUpdatingStatus(true);
+    setStatusUpdateMessage('');
+
+    try {
+      const res = await axios.put(`/api/grievances/${statusModalGrievance._id}/status`, {
+        status: newStatus,
+        comment: statusComment,
+        remark: statusComment
+      });
+
+      if (res.data.success) {
+        setStatusUpdateMessage(`Status updated to ${newStatus} successfully!`);
+        fetchAdminGrievances();
+        fetchAnalytics();
+        setTimeout(() => setStatusModalGrievance(null), 1200);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Unable to update grievance status. Please try again.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   const handleOpenAssignModal = (g) => {
     setSelectedGrievance(g);
     setAssignDepartment(g.department || '');
     setAssignOfficerId(g.assignedOfficer?._id || '');
     setAssignRemark(g.adminRemarks || '');
-    setAssignSuccess('');
   };
 
   const handleAssignSubmit = async (e) => {
@@ -75,7 +128,6 @@ export default function AdminDashboard() {
     if (!selectedGrievance) return;
 
     setAssigning(true);
-    setAssignSuccess('');
 
     try {
       const res = await axios.put(`/api/admin/grievances/${selectedGrievance._id}/assign`, {
@@ -85,15 +137,15 @@ export default function AdminDashboard() {
       });
 
       if (res.data.success) {
-        setAssignSuccess('Grievance assigned successfully.');
+        alert('Grievance assigned successfully!');
         fetchAdminGrievances();
         fetchAnalytics();
+        setSelectedGrievance(null);
       }
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to assign grievance.');
     } finally {
       setAssigning(false);
-      setTimeout(() => setSelectedGrievance(null), 1200);
     }
   };
 
@@ -126,7 +178,7 @@ export default function AdminDashboard() {
             <span>Nodal Officer & Administration Control Center</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold font-outfit">
-            SUVIDHA 2.0 Admin Intelligence Portal
+            SUVIDHA 2.0 Admin Control Center
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Logged in as <strong className="text-slate-900 dark:text-white">{user?.name}</strong> ({user?.role})
@@ -136,9 +188,10 @@ export default function AdminDashboard() {
         <div className="flex items-center space-x-2">
           <button
             onClick={() => { fetchAnalytics(); fetchAdminGrievances(); }}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-200"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 shadow-md flex items-center gap-2"
           >
-            Sync Live Database
+            <RefreshCw className="w-4 h-4" />
+            <span>Sync Database</span>
           </button>
         </div>
       </div>
@@ -178,38 +231,38 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
-                <span>Registered Citizens</span>
-                <Users className="w-4 h-4 text-indigo-600" />
-              </div>
-              <div className="text-3xl font-extrabold font-outfit">{analytics?.totalUsers || 0}</div>
-              <div className="text-[10px] text-slate-400">Authenticated profiles</div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
-                <span>Indexed Schemes</span>
-                <Layers className="w-4 h-4 text-emerald-600" />
-              </div>
-              <div className="text-3xl font-extrabold text-emerald-600 font-outfit">{analytics?.totalSchemes || 3400}</div>
-              <div className="text-[10px] text-slate-400">Central & State Catalog</div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
                 <span>Total Grievances</span>
-                <ShieldAlert className="w-4 h-4 text-amber-600" />
+                <ShieldAlert className="w-4 h-4 text-indigo-600" />
               </div>
-              <div className="text-3xl font-extrabold text-amber-600 font-outfit">{analytics?.totalGrievances || 0}</div>
-              <div className="text-[10px] text-slate-400">Filed across departments</div>
+              <div className="text-3xl font-extrabold font-outfit text-indigo-600">{analytics?.totalGrievances || grievances.length}</div>
+              <div className="text-[10px] text-slate-400">Database total count</div>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
-                <span>SLA Overdue Violations</span>
+                <span>In Progress</span>
+                <Clock className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="text-3xl font-extrabold text-amber-500 font-outfit">{analytics?.inProgressCount || 0}</div>
+              <div className="text-[10px] text-slate-400">Active investigation</div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                <span>Resolved & Closed</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="text-3xl font-extrabold text-emerald-500 font-outfit">{analytics?.resolvedCount || 0}</div>
+              <div className="text-[10px] text-slate-400">Completed redressals</div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                <span>Escalated Cases</span>
                 <AlertTriangle className="w-4 h-4 text-rose-600 animate-pulse" />
               </div>
-              <div className="text-3xl font-extrabold text-rose-600 font-outfit">{analytics?.overdueCount || 0}</div>
-              <div className="text-[10px] text-slate-400">Exceeded target SLA resolution</div>
+              <div className="text-3xl font-extrabold text-rose-600 font-outfit">{analytics?.escalatedCount || 0}</div>
+              <div className="text-[10px] text-slate-400">Critical priority escalations</div>
             </div>
           </div>
 
@@ -252,7 +305,7 @@ export default function AdminDashboard() {
                   <th className="p-3">Category</th>
                   <th className="p-3">Department</th>
                   <th className="p-3">Priority</th>
-                  <th className="p-3">Status</th>
+                  <th className="p-3">Current Status</th>
                   <th className="p-3 text-center">Actions</th>
                 </tr>
               </thead>
@@ -279,9 +332,17 @@ export default function AdminDashboard() {
                           {g.priority}
                         </span>
                       </td>
-                      <td className="p-3 font-bold text-emerald-600">{g.status}</td>
+                      <td className="p-3 font-extrabold text-indigo-600 dark:text-indigo-400">{g.status}</td>
                       <td className="p-3 text-center">
                         <div className="flex items-center justify-center space-x-2">
+                          <button
+                            onClick={() => handleOpenStatusModal(g)}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-500 transition-colors flex items-center gap-1 shadow-sm"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Update Status</span>
+                          </button>
+
                           <button
                             onClick={() => handleOpenAssignModal(g)}
                             className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-[11px] hover:bg-indigo-500 transition-colors flex items-center gap-1"
@@ -308,6 +369,69 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* UPDATE STATUS MODAL */}
+      {statusModalGrievance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div>
+                <span className="font-mono text-xs font-bold text-indigo-600">#{statusModalGrievance.referenceNumber}</span>
+                <h2 className="text-lg font-bold font-outfit">Update Grievance Status & History Log</h2>
+              </div>
+              <button onClick={() => setStatusModalGrievance(null)} className="p-1 text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleStatusSubmit} className="space-y-4 text-xs">
+              {statusUpdateMessage && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{statusUpdateMessage}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold mb-1">Current Status: <strong className="text-indigo-600">{statusModalGrievance.status}</strong></label>
+                <label className="block font-semibold mb-1">Select New Status *</label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                >
+                  {VALID_STATUSES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Status Update Comment / Official Remark</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={statusComment}
+                  onChange={(e) => setStatusComment(e.target.value)}
+                  placeholder="e.g. The complaint has been forwarded to the concerned department for immediate investigation."
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setStatusModalGrievance(null)} className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold">
+                  Cancel
+                </button>
+                <button type="submit" disabled={updatingStatus} className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold shadow-md hover:bg-emerald-500">
+                  {updatingStatus ? 'Updating Database...' : 'Confirm Update Status'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
       {/* ADMIN ASSIGNMENT MODAL */}
       {selectedGrievance && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
@@ -324,13 +448,6 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleAssignSubmit} className="space-y-4 text-xs">
-              {assignSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{assignSuccess}</span>
-                </div>
-              )}
-
               <div>
                 <label className="block font-semibold mb-1">Target Department</label>
                 <input
