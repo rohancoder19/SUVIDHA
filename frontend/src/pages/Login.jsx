@@ -24,7 +24,14 @@ export default function Login() {
 
     const res = await login(email, password);
     if (res.success) {
-      navigate(redirectTarget, { replace: true });
+      const userRole = res.user?.role;
+      let target = redirectTarget;
+      if (userRole === 'Officer') {
+        target = '/officer/dashboard';
+      } else if (userRole === 'Admin') {
+        target = '/admin/dashboard';
+      }
+      navigate(target, { replace: true });
     } else {
       setError(res.error || 'Invalid email or password.');
     }

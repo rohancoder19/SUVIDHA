@@ -28,6 +28,14 @@ export default function Dashboard() {
   ];
 
   useEffect(() => {
+    if (user?.role === 'Officer') {
+      navigate('/officer/dashboard', { replace: true });
+      return;
+    }
+    if (user?.role === 'Admin') {
+      navigate('/admin/dashboard', { replace: true });
+      return;
+    }
     fetchDashboardData();
   }, [user]);
 
