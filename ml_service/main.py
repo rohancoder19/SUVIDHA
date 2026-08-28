@@ -135,3 +135,68 @@ def chat_rag_endpoint(request: ChatQueryRequest):
         "cited_schemes": response_data["cited_schemes"],
         "sources": response_data["sources"]
     }
+
+class GrievanceClassifyRequest(BaseModel):
+    title: str = Field(..., example="High Voltage Open Transformer near school")
+    description: str = Field(..., example="Large electrical wire hanging dangerously outside school gate.")
+    category: Optional[str] = Field(default="Other")
+    location: Optional[str] = Field(default="")
+
+@app.post("/classify-grievance")
+def classify_grievance_endpoint(request: GrievanceClassifyRequest):
+    text = f"{request.title} {request.description}".lower()
+    
+    category = request.category or "Other"
+    priority = "MEDIUM"
+    urgency_score = 50
+    department = "Municipal Corporation"
+    reason = "General civic grievance received for officer triage."
+
+    # Hazard & Urgency Rules
+    if any(k in text for k in ["fire", "transformer", "wire", "electric shock", "explosion", "spark", "hanging wire", "high voltage"]):
+        category = "Electricity"
+        priority = "CRITICAL"
+        urgency_score = 95
+        department = "Electricity Department"
+        reason = "Immediate public safety hazard involving electrical infrastructure near public areas."
+    elif any(k in text for k in ["drainage overflow", "sewage", "contaminated water", "no water", "pipe burst", "leakage"]):
+        category = "Water Supply" if "water" in text else "Drainage & Sewage"
+        priority = "HIGH"
+        urgency_score = 85
+        department = "Water & Sanitation Department"
+        reason = "Public health concern due to water or sewage line disruption."
+    elif any(k in text for k in ["pothole", "accident", "collapsed road", "bridge", "cave in", "highway"]):
+        category = "Road & Infrastructure"
+        priority = "HIGH"
+        urgency_score = 80
+        department = "Public Works Department (PWD)"
+        reason = "Road safety hazard affecting vehicular and pedestrian movement."
+    elif any(k in text for k in ["garbage", "dump", "smell", "waste", "sanitation"]):
+        category = "Garbage & Sanitation"
+        priority = "MEDIUM"
+        urgency_score = 65
+        department = "Municipal Health & Sanitation Dept"
+        reason = "Sanitation issue affecting local hygiene."
+    elif any(k in text for k in ["street light", "darkness", "dark spot"]):
+        category = "Street Light"
+        priority = "MEDIUM"
+        urgency_score = 60
+        department = "Electrical Maintenance Cell"
+        reason = "Street lighting defect creating night-time safety concerns."
+    elif any(k in text for k in ["pension", "scholarship", "subsidy", "benefit", "delay", "payment"]):
+        category = "Welfare Scheme"
+        priority = "MEDIUM"
+        urgency_score = 55
+        department = "Social Welfare Department"
+        reason = "Administrative welfare service delay reported by citizen."
+
+    return {
+        "success": True,
+        "category": category,
+        "priority": priority,
+        "urgencyScore": urgency_score,
+        "department": department,
+        "reason": reason,
+        "disclaimer": "AI-generated classification — subject to official verification."
+    }
+

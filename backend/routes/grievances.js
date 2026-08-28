@@ -50,94 +50,127 @@ const generateRefNumber = async () => {
 };
 
 // @route   POST /api/grievances/classify
-// @desc    AI Smart Classification helper from natural language problem description
+// @desc    AI Smart Classification helper from title, description & location
 router.post('/classify', auth, async (req, res) => {
   try {
-    const { description } = req.body;
-    if (!description) {
-      return res.status(400).json({ success: false, error: 'Description is required for AI classification.' });
+    const { title, description, category, location } = req.body;
+    if (!description && !title) {
+      return res.status(400).json({ success: false, error: 'Title or description is required for AI classification.' });
     }
 
-    const text = description.toLowerCase();
-    let category = 'Other';
-    let department = 'Department of Public Grievances';
-    let suggestedPriority = 'MEDIUM';
+    const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
+    try {
+      const axios = require('axios');
+      const mlRes = await axios.post(`${ML_SERVICE_URL}/classify-grievance`, {
+        title: title || '',
+        description: description || '',
+        category: category || 'Other',
+        location: location || ''
+      }, { timeout: 4000 });
 
-    if (text.includes('payment') || text.includes('money') || text.includes('installment') || text.includes('amount') || text.includes('bank')) {
-      category = 'Payment Issue';
-      department = 'Direct Benefit Transfer (DBT) Cell / Finance Dept';
-      suggestedPriority = 'HIGH';
-    } else if (text.includes('scholarship') || text.includes('student') || text.includes('school') || text.includes('fee')) {
-      category = 'Scholarship Issue';
-      department = 'Department of Education & Social Justice';
-      suggestedPriority = 'MEDIUM';
-    } else if (text.includes('pension') || text.includes('senior') || text.includes('elderly') || text.includes('old age')) {
-      category = 'Pension Issue';
-      department = 'Social Security & Elderly Welfare Dept';
-      suggestedPriority = 'HIGH';
-    } else if (text.includes('reject') || text.includes('disallow')) {
-      category = 'Application Rejected';
-      department = 'Scheme Sanctioning Authority';
-      suggestedPriority = 'HIGH';
-    } else if (text.includes('delay') || text.includes('pending') || text.includes('waiting')) {
-      category = 'Application Delayed';
-      department = 'District Nodal Officer Cell';
-      suggestedPriority = 'MEDIUM';
-    } else if (text.includes('document') || text.includes('certificate') || text.includes('aadhaar')) {
-      category = 'Documentation Problem';
-      department = 'Revenue & e-Seva Kendra Desk';
-      suggestedPriority = 'LOW';
-    } else if (text.includes('corrupt') || text.includes('bribe') || text.includes('fake')) {
-      category = 'Corruption/Irregularity';
-      department = 'Vigilance & Public Grievance Commission';
-      suggestedPriority = 'URGENT';
-    }
+      return res.json(mlRes.data);
+    } catch (mlErr) {
+      console.warn('ML Service offline, using local fallback classifier:', mlErr.message);
 
-    res.json({
-      success: true,
-      data: {
-        category,
-        department,
-        suggestedPriority,
-        aiExplanation: `Based on terms analyzed in your description, this grievance is classified under "${category}" and routed to "${department}".`
+      const text = `${title} ${description}`.toLowerCase();
+      let resCategory = category || 'Other';
+      let department = 'Department of Public Grievances';
+      let suggestedPriority = 'MEDIUM';
+      let urgencyScore = 50;
+
+      if (text.includes('fire') || text.includes('transformer') || text.includes('wire') || text.includes('electric shock')) {
+        resCategory = 'Electricity';
+        department = 'Electricity Department';
+        suggestedPriority = 'CRITICAL';
+        urgencyScore = 95;
+      } else if (text.includes('payment') || text.includes('money') || text.includes('bank') || text.includes('installment')) {
+        resCategory = 'Payment Issue';
+        department = 'Direct Benefit Transfer (DBT) Cell';
+        suggestedPriority = 'HIGH';
+        urgencyScore = 80;
+      } else if (text.includes('drainage') || text.includes('sewage') || text.includes('water')) {
+        resCategory = text.includes('water') ? 'Water Supply' : 'Drainage & Sewage';
+        department = 'Water & Sanitation Department';
+        suggestedPriority = 'HIGH';
+        urgencyScore = 85;
+      } else if (text.includes('road') || text.includes('pothole') || text.includes('accident')) {
+        resCategory = 'Road & Infrastructure';
+        department = 'Public Works Department (PWD)';
+        suggestedPriority = 'HIGH';
+        urgencyScore = 75;
       }
-    });
+
+      return res.json({
+        success: true,
+        category: resCategory,
+        priority: suggestedPriority,
+        urgencyScore,
+        department,
+        reason: 'Rule-based classification fallback — subject to officer verification.',
+        disclaimer: 'AI service unavailable — manual officer review required.'
+      });
+    }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // @route   POST /api/grievances/create
-// @desc    Register a new public grievance with reference number & optional file attachments
+// @desc    Register a new public grievance with reference number, coordinates, & photo evidence
 router.post('/create', auth, upload.array('attachments', 5), async (req, res) => {
   try {
-    const { category, schemeName, department, state, district, subject, description, incidentDate, applicationNumber, priority } = req.body;
+    const {
+      category, schemeName, department, state, district, subject, description,
+      incidentDate, applicationNumber, priority, address, latitude, longitude,
+      aiCategory, aiPriority, aiDepartment, aiReason, urgencyScore
+    } = req.body;
 
     if (!category || !subject || !description) {
       return res.status(400).json({ success: false, error: 'Category, subject, and problem description are required.' });
     }
 
+    if (subject.length < 5 || subject.length > 150) {
+      return res.status(400).json({ success: false, error: 'Issue title must be between 5 and 150 characters.' });
+    }
+
+    if (description.length < 20 || description.length > 3000) {
+      return res.status(400).json({ success: false, error: 'Detailed description must be between 20 and 3000 characters.' });
+    }
+
     const refNumber = await generateRefNumber();
     const attachmentPaths = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
+
+    const parsedLat = latitude && !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : null;
+    const parsedLng = longitude && !isNaN(parseFloat(longitude)) ? parseFloat(longitude) : null;
 
     const newGrievance = new Grievance({
       referenceNumber: refNumber,
       user: req.user._id,
       category,
-      schemeName: schemeName || 'General Welfare Scheme',
-      department: department || 'Department of Public Grievances',
+      schemeName: schemeName || 'General Civic & Welfare Service',
+      department: department || aiDepartment || 'Department of Public Grievances',
       state: state || req.user.profile?.state || 'All India',
       district: district || req.user.profile?.district || '',
       subject,
       description,
       incidentDate: incidentDate ? new Date(incidentDate) : new Date(),
       applicationNumber: applicationNumber || '',
+      address: address || '',
+      latitude: parsedLat,
+      longitude: parsedLng,
       attachments: attachmentPaths,
-      priority: priority || 'MEDIUM',
+      priority: priority || aiPriority || 'MEDIUM',
+      aiCategory: aiCategory || category,
+      aiPriority: aiPriority || priority || 'MEDIUM',
+      aiDepartment: aiDepartment || department || 'Department of Public Grievances',
+      aiReason: aiReason || '',
+      urgencyScore: urgencyScore ? Number(urgencyScore) : 50,
+      finalCategory: category,
+      finalPriority: priority || 'MEDIUM',
       status: 'SUBMITTED',
       statusHistory: [{
         status: 'SUBMITTED',
-        remark: 'Grievance submitted successfully by citizen.',
+        remark: 'Grievance submitted successfully with GPS coordinates and evidence proof.',
         updatedBy: req.user._id,
         timestamp: new Date()
       }]

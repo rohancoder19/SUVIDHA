@@ -7,21 +7,26 @@ const grievanceSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'Scheme Benefit Not Received',
-      'Application Rejected',
-      'Application Delayed',
+      'Road & Infrastructure',
+      'Electricity',
+      'Water Supply',
+      'Drainage & Sewage',
+      'Garbage & Sanitation',
+      'Street Light',
+      'Public Safety',
+      'Welfare Scheme',
+      'Scholarship',
+      'Pension',
+      'Subsidy',
+      'Healthcare',
+      'Government Service',
+      'Application Delay',
       'Payment Issue',
-      'Scholarship Issue',
-      'Pension Issue',
-      'Subsidy Issue',
-      'Documentation Problem',
-      'Eligibility Dispute',
-      'Government Service Issue',
-      'Corruption/Irregularity',
+      'Documentation Issue',
       'Other'
     ]
   },
-  schemeName: { type: String, default: 'General Welfare Service' },
+  schemeName: { type: String, default: 'General Civic & Welfare Service' },
   department: { type: String, default: 'Department of Revenue & Public Grievances' },
   state: { type: String, required: true, default: 'All India' },
   district: { type: String, default: '' },
@@ -29,8 +34,22 @@ const grievanceSchema = new mongoose.Schema({
   description: { type: String, required: true },
   incidentDate: { type: Date, default: Date.now },
   applicationNumber: { type: String, default: '' },
+  address: { type: String, default: '' },
+  latitude: { type: Number, default: null },
+  longitude: { type: Number, default: null },
   attachments: [{ type: String }],
-  priority: { type: String, enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'], default: 'MEDIUM' },
+  priority: { type: String, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], default: 'MEDIUM' },
+  
+  // AI Triage & Classification Output
+  aiCategory: { type: String, default: '' },
+  aiPriority: { type: String, default: '' },
+  aiDepartment: { type: String, default: '' },
+  aiReason: { type: String, default: '' },
+  urgencyScore: { type: Number, default: 50 },
+
+  finalCategory: { type: String, default: '' },
+  finalPriority: { type: String, default: '' },
+
   status: {
     type: String,
     enum: [
@@ -57,7 +76,9 @@ const grievanceSchema = new mongoose.Schema({
     remark: { type: String, default: '' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     timestamp: { type: Date, default: Date.now }
-  }]
+  }],
+  resolvedAt: { type: Date }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Grievance', grievanceSchema);
+

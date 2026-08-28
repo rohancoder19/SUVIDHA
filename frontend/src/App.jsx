@@ -15,6 +15,9 @@ import WelfareFinder from './pages/WelfareFinder';
 import Dashboard from './pages/Dashboard';
 import ApplicationTracker from './pages/ApplicationTracker';
 import GrievancePortal from './pages/GrievancePortal';
+import FileGrievance from './pages/FileGrievance';
+import GrievanceDetail from './pages/GrievanceDetail';
+import OfficerDashboard from './pages/OfficerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -40,20 +43,52 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
 
+              {/* Public Unauthenticated Tracking Routes */}
+              <Route path="/grievances/track" element={<GrievancePortal />} />
+              <Route path="/track" element={<GrievancePortal />} />
+
               {/* Protected Application Routes (Requires Verified Session) */}
               <Route path="/" element={<ProtectedRoute><Home onOpenChat={() => setIsChatOpen(true)} /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/finder" element={<ProtectedRoute><WelfareFinder /></ProtectedRoute>} />
+              <Route path="/schemes" element={<ProtectedRoute><WelfareFinder /></ProtectedRoute>} />
               <Route path="/tracker" element={<ProtectedRoute><ApplicationTracker /></ProtectedRoute>} />
               <Route path="/grievances" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
-              <Route path="/grievances/track" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
+              <Route path="/complaint" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
+              <Route path="/complaints" element={<ProtectedRoute><GrievancePortal /></ProtectedRoute>} />
+              <Route path="/grievances/create" element={<ProtectedRoute><FileGrievance /></ProtectedRoute>} />
+              <Route path="/grievances/:id" element={<ProtectedRoute><GrievanceDetail /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               
-              {/* Officer / Admin Protected Route */}
+              {/* Officer / Admin Protected Routes */}
+              <Route
+                path="/officer"
+                element={
+                  <ProtectedRoute roles={['Officer', 'Admin']}>
+                    <OfficerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/officer/dashboard"
+                element={
+                  <ProtectedRoute roles={['Officer', 'Admin']}>
+                    <OfficerDashboard />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute roles={['Officer', 'Admin']}>
+                  <ProtectedRoute roles={['Admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute roles={['Admin']}>
                     <AdminDashboard />
                   </ProtectedRoute>
                 }

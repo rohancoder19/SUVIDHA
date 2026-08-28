@@ -14,6 +14,7 @@ const complaintRoutes = require('./routes/complaints');
 const chatbotRoutes = require('./routes/chatbot');
 const bookmarkRoutes = require('./routes/bookmarks');
 const applicationRoutes = require('./routes/applications');
+const adminRoutes = require('./routes/admin');
 const feedbackRoutes = require('./routes/feedback');
 
 const Scheme = require('./models/Scheme');
@@ -59,6 +60,7 @@ app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Admin Analytics Endpoint (Real Database Metrics)
 app.get('/api/admin/analytics', async (req, res) => {

@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
           
           // Redirect to /login with current path saved
           const currentPath = window.location.pathname;
-          if (!currentPath.includes('/login') && !currentPath.includes('/register') && !currentPath.includes('/forgot-password') && !currentPath.includes('/reset-password')) {
+          if (!currentPath.includes('/login') && !currentPath.includes('/register') && !currentPath.includes('/forgot-password') && !currentPath.includes('/reset-password') && !currentPath.includes('/track')) {
             window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
           }
         }

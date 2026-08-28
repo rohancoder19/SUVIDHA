@@ -109,9 +109,11 @@ class RAGEngine:
         cited_schemes = [d["metadata"]["name"] for d in context_docs]
 
         if HAS_GEMINI and self.api_key:
-            try:
-                model = genai.GenerativeModel("gemini-2.5-flash")
-                prompt = f"""You are SUVIDHA AI, an expert Civic Welfare & Scheme Assistant.
+            model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+            for m_name in [model_name, "gemini-1.5-flash", "gemini-2.5-flash", "gemini-pro"]:
+                try:
+                    model = genai.GenerativeModel(m_name)
+                    prompt = f"""You are SUVIDHA AI, an expert Civic Welfare & Scheme Assistant.
 Answer the citizen's query based ONLY on the provided scheme context below.
 Provide accurate details about eligibility, benefits, and step-by-step application instructions.
 Cite exact scheme names in your response.
@@ -123,14 +125,15 @@ Scheme Context:
 
 Format your response clearly with markdown headings, bullet points, and actionable steps.
 """
-                response = model.generate_content(prompt)
-                return {
-                    "answer": response.text,
-                    "cited_schemes": cited_schemes,
-                    "sources": context_docs
-                }
-            except Exception as e:
-                print(f"Gemini API execution note: {e}")
+                    response = model.generate_content(prompt)
+                    return {
+                        "answer": response.text,
+                        "cited_schemes": cited_schemes,
+                        "sources": context_docs
+                    }
+                except Exception as e:
+                    print(f"Gemini API model {m_name} note: {e}")
+                    continue
 
         # High quality structured fallback response
         fallback_answer = f"### 🏛️ Welfare Scheme Intelligence Report\n\nBased on your query **\"{user_query}\"**, here are the most relevant government schemes:\n\n"

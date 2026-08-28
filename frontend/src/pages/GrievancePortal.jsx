@@ -6,10 +6,12 @@ import {
   AlertCircle, Shield, Upload, Download, ArrowRight, Eye, Calendar,
   Building, MapPin, Tag, ChevronRight, User
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import AIGrievanceAssistantModal from '../components/AIGrievanceAssistantModal';
 
 export default function GrievancePortal() {
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   // Tab State: 'my-grievances', 'raise', 'track'
   const [activeTab, setActiveTab] = useState(() => {
@@ -48,8 +50,35 @@ export default function GrievancePortal() {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchMyGrievances();
-  }, []);
+    if (isAuthenticated) {
+      fetchMyGrievances();
+    }
+    const params = new URLSearchParams(location.search);
+    const refParam = params.get('ref');
+    if (refParam) {
+      setActiveTab('track');
+      setTrackRefInput(refParam);
+      trackByRef(refParam);
+    }
+  }, [location.search, isAuthenticated]);
+
+  const trackByRef = async (refNum) => {
+    if (!refNum) return;
+    setTrackingLoading(true);
+    setTrackError('');
+    setTrackedGrievance(null);
+
+    try {
+      const res = await axios.get(`/api/grievances/track/${refNum.trim().toUpperCase()}`);
+      if (res.data.success) {
+        setTrackedGrievance(res.data.grievance);
+      }
+    } catch (err) {
+      setTrackError(err.response?.data?.error || 'No grievance found for this reference number.');
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
 
   const fetchMyGrievances = async () => {
     setLoadingMy(true);
@@ -159,13 +188,22 @@ export default function GrievancePortal() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsAiModalOpen(true)}
-          className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all z-10 shrink-0"
-        >
-          <Sparkles className="w-4 h-4 text-indigo-200 animate-pulse" />
-          <span>Launch AI Grievance Assistant</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-3 z-10 shrink-0">
+          <Link
+            to="/grievances/create"
+            className="px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center space-x-2 shadow-lg shadow-emerald-500/20 transition-all"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>File Civic Grievance</span>
+          </Link>
+          <button
+            onClick={() => setIsAiModalOpen(true)}
+            className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-200 animate-pulse" />
+            <span>Launch AI Assistant</span>
+          </button>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
