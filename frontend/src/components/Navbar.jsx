@@ -1,149 +1,254 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Search, FileText, CheckCircle, Bot, User, LogOut, Lock, Sparkles } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { Shield, Search, FileText, CheckCircle, Sparkles, User, LogOut, Sun, Moon, Globe, Menu, X, LayoutDashboard } from 'lucide-react';
 
 export default function Navbar({ onOpenChat }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const { language, changeLanguage, t } = useLanguage();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800/80 backdrop-blur-xl transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         
         {/* Brand Logo */}
         <Link to="/" className="flex items-center space-x-3 group">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-teal-500/20 group-hover:scale-105 transition-transform duration-200">
-            <Shield className="w-6 h-6 text-slate-950 font-bold" />
-          </div>
+          <img
+            src="/logo.svg"
+            alt="SUVIDHA 2.0 Logo"
+            className="w-11 h-11 object-contain group-hover:scale-105 transition-transform duration-200"
+          />
           <div>
             <div className="flex items-center space-x-1.5">
-              <span className="font-extrabold text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-emerald-300 to-cyan-400 font-outfit">
+              <span className="font-extrabold text-2xl tracking-wider text-slate-900 dark:text-white font-outfit">
                 SUVIDHA
               </span>
-              <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded tracking-widest">
-                AI 2.5
+              <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded tracking-widest">
+                2.0 AI
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium tracking-tight">Civic Welfare & Scheme Portal</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">Civic Welfare & Scheme Portal</p>
           </div>
         </Link>
 
-        {/* Navigation Links */}
-        <nav className="hidden md:flex items-center space-x-1 bg-slate-900/60 p-1.5 rounded-full border border-slate-800">
+
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-full border border-slate-200 dark:border-slate-800">
           <Link
             to="/"
-            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-2 ${
-              isActive('/') ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 shadow-md shadow-teal-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
+              isActive('/') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
             }`}
           >
-            <span>Home</span>
+            {t('navHome')}
           </Link>
 
           <Link
             to="/finder"
-            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-2 ${
-              isActive('/finder') ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 shadow-md shadow-teal-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 ${
+              isActive('/finder') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
             }`}
           >
             <Search className="w-3.5 h-3.5" />
-            <span>Welfare Finder</span>
+            <span>{t('navFinder')}</span>
+          </Link>
+
+          {user && (
+            <Link
+              to="/dashboard"
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 ${
+                isActive('/dashboard') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>{t('navDashboard')}</span>
+            </Link>
+          )}
+
+          <Link
+            to="/tracker"
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 ${
+              isActive('/tracker') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
+            }`}
+          >
+            <CheckCircle className="w-3.5 h-3.5" />
+            <span>{t('navTracker')}</span>
           </Link>
 
           <Link
             to="/complaint"
-            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-2 ${
-              isActive('/complaint') ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 shadow-md shadow-teal-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 ${
+              isActive('/complaint') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>File Grievance</span>
-          </Link>
-
-          <Link
-            to="/tracker"
-            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-2 ${
-              isActive('/tracker') ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 shadow-md shadow-teal-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span>Track Status</span>
+            <span>{t('navComplaint')}</span>
           </Link>
 
           {(user?.role === 'Officer' || user?.role === 'Admin') && (
             <Link
               to="/admin"
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-2 ${
-                isActive('/admin') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/20' : 'text-indigo-300 hover:text-white hover:bg-indigo-900/40'
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 ${
+                isActive('/admin') ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/40'
               }`}
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Officer Portal</span>
+              <span>{t('navAdmin')}</span>
             </Link>
           )}
         </nav>
 
-        {/* Right Controls */}
-        <div className="flex items-center space-x-3">
-          
-          {/* AI Assistant Button */}
+        {/* Controls (Theme, Language, Auth, Chat) */}
+        <div className="flex items-center space-x-2.5">
+          {/* Language Selector */}
+          <div className="relative flex items-center">
+            <Globe className="w-4 h-4 text-slate-400 absolute left-2.5 pointer-events-none" />
+            <select
+              value={language}
+              onChange={(e) => changeLanguage(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-full border border-slate-200 dark:border-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="en">EN</option>
+              <option value="hi">हिंदी</option>
+              <option value="bn">বাংলা</option>
+            </select>
+          </div>
+
+          {/* Theme Toggle */}
           <button
-            onClick={onOpenChat}
-            className="px-3.5 py-2 rounded-full bg-slate-900/90 border border-teal-500/30 text-teal-300 hover:bg-teal-500/10 hover:border-teal-400 text-xs font-semibold flex items-center space-x-2 transition-all duration-200 shadow-sm"
+            onClick={toggleTheme}
+            className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Toggle Light / Dark Mode"
           >
-            <Sparkles className="w-4 h-4 text-teal-400 animate-pulse" />
-            <span className="hidden sm:inline">AI Assistant</span>
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
 
-          {/* User Auth Info */}
+          {/* AI Chat Button */}
+          <button
+            onClick={onOpenChat}
+            className="px-3.5 py-2 rounded-full bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+            <span className="hidden sm:inline">AI Query</span>
+          </button>
+
+          {/* Auth Controls */}
           {user ? (
-            <div className="flex items-center space-x-3 pl-2 border-l border-slate-800">
-              <Link to="/profile" className="flex items-center space-x-2.5 group">
-                <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-teal-400 font-bold group-hover:border-teal-500 transition-colors">
+            <div className="hidden sm:flex items-center space-x-2.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+              <Link to="/profile" className="flex items-center space-x-2 group">
+                <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs">
                   {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
-                <div className="hidden lg:block text-left">
-                  <div className="text-xs font-semibold text-slate-200 group-hover:text-teal-300 transition-colors">
-                    {user.name}
-                  </div>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider ${
-                    user.role === 'Admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                    user.role === 'Officer' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
-                    'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  }`}>
-                    {user.role}
-                  </span>
-                </div>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                  {user.name}
+                </span>
               </Link>
               <button
                 onClick={logout}
-                title="Logout"
-                className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800/60 transition-colors"
+                title="Sign Out"
+                className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center space-x-2">
+            <div className="hidden sm:flex items-center space-x-2">
               <Link
                 to="/login"
-                className="px-4 py-2 rounded-full text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+                className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition-colors"
               >
-                Sign In
+                {t('navLogin')}
               </Link>
               <Link
                 to="/register"
-                className="glow-btn-primary px-4 py-2 rounded-full text-xs font-semibold text-slate-950"
+                className="px-4 py-2 rounded-full text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all"
               >
-                Register
+                {t('navRegister')}
               </Link>
             </div>
           )}
 
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-6 space-y-2">
+          <Link
+            to="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {t('navHome')}
+          </Link>
+          <Link
+            to="/finder"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {t('navFinder')}
+          </Link>
+          {user && (
+            <Link
+              to="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {t('navDashboard')}
+            </Link>
+          )}
+          <Link
+            to="/tracker"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {t('navTracker')}
+          </Link>
+          <Link
+            to="/complaint"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {t('navComplaint')}
+          </Link>
+          {!user ? (
+            <div className="pt-2 flex flex-col space-y-2">
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg"
+              >
+                {t('navLogin')}
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg"
+              >
+                {t('navRegister')}
+              </Link>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{user.name}</span>
+              <button onClick={logout} className="text-xs font-semibold text-rose-500">Sign Out</button>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 }

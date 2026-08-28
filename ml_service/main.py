@@ -13,12 +13,12 @@ from rag_engine import RAGEngine
 load_dotenv()
 
 app = FastAPI(
-    title="SUVIDHA AI & ML Microservice",
-    description="FastAPI Scheme Recommendation & RAG Engine",
-    version="1.0.0"
+    title="SUVIDHA 2.0 AI & ML Microservice",
+    description="FastAPI Scheme Recommendation, RAG Engine & Explainable AI",
+    version="2.0.0"
 )
 
-# Enable CORS for Express backend and React frontend
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,16 +33,23 @@ rag_engine: Optional[RAGEngine] = None
 
 class UserProfileRequest(BaseModel):
     state: str = Field(default="All India", example="Maharashtra")
+    district: Optional[str] = Field(default="", example="Pune")
     age: int = Field(default=25, example=28)
     gender: str = Field(default="All", example="Female")
     income: float = Field(default=250000.0, example=150000.0)
     category: str = Field(default="General", example="OBC")
     isStudent: bool = Field(default=False, example=False)
     occupation: str = Field(default="All", example="Farmer")
+    education: Optional[str] = Field(default="Graduate")
+    employmentStatus: Optional[str] = Field(default="Employed")
     pincode: Optional[str] = Field(default="", example="400001")
 
 class ChatQueryRequest(BaseModel):
-    query: str = Field(..., example="Which schemes can help a 25 year old female farmer in Maharashtra?")
+    query: str = Field(..., example="Which schemes can help a college student looking for scholarships?")
+    userProfile: Optional[UserProfileRequest] = None
+
+class NaturalSearchRequest(BaseModel):
+    query: str = Field(..., example="Scholarships for female students in West Bengal")
     userProfile: Optional[UserProfileRequest] = None
 
 @app.on_event("startup")
@@ -70,7 +77,7 @@ def load_and_initialize_dataset():
 def health_check():
     return {
         "status": "healthy",
-        "service": "SUVIDHA ML Engine",
+        "service": "SUVIDHA ML Engine 2.0",
         "port": 8000,
         "schemes_loaded": len(SCHEMES_CACHE)
     }
@@ -81,7 +88,7 @@ def recommend_schemes(profile: UserProfileRequest):
     if not SCHEMES_CACHE:
         raise HTTPException(status_code=500, detail="Schemes dataset not initialized")
     
-    # Run deterministic hard filter and ascending match score sorting
+    # Run deterministic hard filter and descending match score sorting with explainability
     eligible_schemes = filter_and_sort_schemes(user_dict, SCHEMES_CACHE)
     
     return {
@@ -90,6 +97,27 @@ def recommend_schemes(profile: UserProfileRequest):
         "total_catalog": len(SCHEMES_CACHE),
         "user_profile": user_dict,
         "schemes": eligible_schemes
+    }
+
+@app.post("/natural-search")
+def natural_search_endpoint(request: NaturalSearchRequest):
+    if not rag_engine:
+        raise HTTPException(status_code=500, detail="RAG engine not initialized")
+    
+    # Query ChromaDB / RAG engine for top relevant candidates
+    context_docs = rag_engine.query_schemes(request.query, top_k=6)
+    
+    matched_slugs = set(doc["metadata"]["slug"] for doc in context_docs if doc.get("metadata", {}).get("slug"))
+    matched_schemes = [s for s in SCHEMES_CACHE if s.get("scheme_slug") in matched_slugs or s.get("slug") in matched_slugs]
+    
+    if not matched_schemes:
+        matched_schemes = SCHEMES_CACHE[:5]
+        
+    return {
+        "success": True,
+        "query": request.query,
+        "count": len(matched_schemes),
+        "schemes": matched_schemes
     }
 
 @app.post("/chat")

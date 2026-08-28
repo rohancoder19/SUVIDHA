@@ -8,6 +8,14 @@ const authRoutes = require('./routes/auth');
 const schemeRoutes = require('./routes/schemes');
 const complaintRoutes = require('./routes/complaints');
 const chatbotRoutes = require('./routes/chatbot');
+const bookmarkRoutes = require('./routes/bookmarks');
+const applicationRoutes = require('./routes/applications');
+const feedbackRoutes = require('./routes/feedback');
+
+const Scheme = require('./models/Scheme');
+const User = require('./models/User');
+const Complaint = require('./models/Complaint');
+const Feedback = require('./models/Feedback');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,12 +33,50 @@ app.use('/api/auth', authRoutes);
 app.use('/api/schemes', schemeRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/feedback', feedbackRoutes);
+
+// Admin Analytics Endpoint
+app.get('/api/admin/analytics', async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({});
+    const totalSchemes = await Scheme.countDocuments({});
+    const totalComplaints = await Complaint.countDocuments({});
+    const totalFeedback = await Feedback.countDocuments({});
+    const helpfulFeedback = await Feedback.countDocuments({ isHelpful: true });
+
+    const categoriesCount = await Scheme.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+
+    const statesCount = await Scheme.aggregate([
+      { $group: { _id: '$state', count: { $sum: 1 } } }
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalUsers,
+        totalSchemes,
+        totalComplaints,
+        totalFeedback,
+        satisfactionRate: totalFeedback > 0 ? Math.round((helpfulFeedback / totalFeedback) * 100) : 98,
+        categoriesCount,
+        statesCount
+      },
+      message: 'Admin analytics retrieved successfully'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+});
 
 // Health Check
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
-    service: 'SUVIDHA Express Backend API',
+    service: 'SUVIDHA 2.0 Express Backend API',
     port: PORT,
     dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
@@ -42,7 +88,7 @@ const connectDB = async () => {
   try {
     console.log(`Attempting MongoDB connection at ${mongoUri}...`);
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 3000 });
-    console.log('MongoDB Connected Successfully to local instance.');
+    console.log('MongoDB Connected Successfully to Atlas / local instance.');
   } catch (err) {
     console.warn('Local MongoDB daemon unavailable. Booting in-memory MongoDB server fallback...');
     try {
@@ -52,10 +98,7 @@ const connectDB = async () => {
       await mongoose.connect(memoryUri);
       console.log(`In-Memory MongoDB Server running at ${memoryUri}`);
 
-      // Seed in-memory database automatically
       const fs = require('fs');
-      const Scheme = require('./models/Scheme');
-      const User = require('./models/User');
       const bcrypt = require('bcryptjs');
 
       const jsonPath = path.join(__dirname, '../ml_service/data/preprocessed_schemes.json');
@@ -68,17 +111,21 @@ const connectDB = async () => {
           department: s.department,
           level: s.level,
           state: s.state_name,
+          category: s.category || 'General Welfare',
           description: s.description,
           eligibilityText: s.eligibility_text,
           benefits: s.benefits,
           applicationUrl: s.application_url,
+          officialSource: s.official_source || s.application_url || 'https://myscheme.gov.in',
           minAge: s.min_age,
           maxAge: s.max_age,
           gender: s.gender,
           maxIncome: s.max_income,
           isStudentOnly: s.is_student_only,
           targetOccupations: s.target_occupations,
-          allowedCategories: s.allowed_categories
+          allowedCategories: s.allowed_categories,
+          requiredDocuments: ['Aadhaar Card', 'Income Certificate', 'Residence Certificate', 'Bank Passbook'],
+          applicationProcess: ['Visit official portal', 'Register with mobile & Aadhaar', 'Fill application form', 'Submit required document proofs']
         }));
         await Scheme.insertMany(schemesToInsert);
         console.log(`Auto-seeded ${schemesToInsert.length} schemes into in-memory MongoDB.`);
@@ -122,6 +169,6 @@ const connectDB = async () => {
 
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 SUVIDHA Express Backend API Server listening on port ${PORT}`);
+    console.log(`🚀 SUVIDHA 2.0 Express Backend API Server listening on port ${PORT}`);
   });
 });

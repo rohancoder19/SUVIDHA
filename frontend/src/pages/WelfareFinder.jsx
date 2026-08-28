@@ -1,380 +1,429 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { Search, Filter, RefreshCw, Bookmark, Sparkles, AlertCircle, Scale, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Sliders, Search, ArrowUpDown, ExternalLink, Bot, CheckCircle, AlertCircle, Info, Sparkles, X, Shield, Filter } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import SchemeCard from '../components/SchemeCard';
+import ExplainableModal from '../components/ExplainableModal';
+import SchemeCompareModal from '../components/SchemeCompareModal';
 
-const INDIAN_STATES = [
-  'All India', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi'
-];
-
-const CATEGORIES = ['General', 'OBC', 'SC', 'ST', 'EWS'];
-const GENDERS = ['All', 'Male', 'Female', 'Transgender'];
-
-export default function WelfareFinder({ onOpenChat }) {
+export default function WelfareFinder() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
+  const location = useLocation();
 
-  // Demographic filter state
-  const [profile, setProfile] = useState({
-    state: user?.profile?.state || 'Madhya Pradesh',
-    age: user?.profile?.age || 25,
-    gender: user?.profile?.gender || 'All',
-    income: user?.profile?.income || 250000,
-    category: user?.profile?.category || 'General',
-    isStudent: user?.profile?.isStudent || false,
-    occupation: user?.profile?.occupation || 'All'
-  });
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedState, setSelectedState] = useState(user?.profile?.state || 'All India');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedGender, setSelectedGender] = useState(user?.profile?.gender || 'All');
+  const [incomeInput, setIncomeInput] = useState(user?.profile?.income || 250000);
+  const [ageInput, setAgeInput] = useState(user?.profile?.age || 25);
+  const [selectedOccupation, setSelectedOccupation] = useState(user?.profile?.occupation || 'All');
 
+  // Datasets & Results
   const [schemes, setSchemes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedScheme, setSelectedScheme] = useState(null);
-  const [textSearch, setTextSearch] = useState(searchParams.get('search') || '');
+  const [error, setError] = useState(null);
 
-  // Fetch schemes from recommendation API
+  // Modals & Comparison State
+  const [explainScheme, setExplainScheme] = useState(null);
+  const [savedSchemeIds, setSavedSchemeIds] = useState([]);
+  const [compareSchemes, setCompareSchemes] = useState([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
+  // States & Categories options
+  const indianStates = [
+    'All India', 'Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi',
+    'Gujarat', 'Haryana', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+    'Maharashtra', 'Odisha', 'Punjab', 'Rajasthan', 'Tamil Nadu', 'Telangana',
+    'Uttar Pradesh', 'West Bengal'
+  ];
+
+  const categories = [
+    'All', 'General Welfare', 'Agriculture & Farmer Welfare', 'Education & Scholarships',
+    'Women & Child Welfare', 'Healthcare & Health Insurance', 'Employment & Skill Development',
+    'Housing & Sanitation', 'Social Security & Pension'
+  ];
+
+  useEffect(() => {
+    // Parse URL params if present
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get('search');
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+    fetchRecommendations();
+    fetchUserBookmarks();
+  }, [location.search]);
+
   const fetchRecommendations = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await axios.post('/api/schemes/recommend', profile);
-      if (res.data && res.data.schemes) {
-        setSchemes(res.data.schemes);
+      const profilePayload = {
+        state: selectedState,
+        age: Number(ageInput),
+        gender: selectedGender,
+        income: Number(incomeInput),
+        category: selectedCategory === 'All' ? 'General' : selectedCategory,
+        isStudent: selectedOccupation === 'Student',
+        occupation: selectedOccupation
+      };
+
+      const res = await axios.post('/api/schemes/recommend', profilePayload);
+      if (res.data.schemes) {
+        let fetched = res.data.schemes;
+
+        // Apply keyword filter if search query present
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          fetched = fetched.filter(s =>
+            (s.title || s.scheme_name || '').toLowerCase().includes(q) ||
+            (s.description || '').toLowerCase().includes(q) ||
+            (s.benefits || '').toLowerCase().includes(q)
+          );
+        }
+
+        setSchemes(fetched);
       }
     } catch (err) {
-      console.error('Recommendation fetch error:', err);
+      console.error('Error fetching scheme recommendations:', err);
+      setError('Unable to fetch recommendations. Please check API server.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchRecommendations();
-  }, [profile]);
+  const fetchUserBookmarks = async () => {
+    if (user) {
+      try {
+        const res = await axios.get('/api/bookmarks');
+        if (res.data.data && res.data.data.savedSchemes) {
+          setSavedSchemeIds(res.data.data.savedSchemes.map(s => s._id || s.id || s.slug));
+        }
+      } catch (err) {
+        console.warn('Could not fetch bookmarks:', err.message);
+      }
+    } else {
+      const localSaved = JSON.parse(localStorage.getItem('suvidha_guest_saved') || '[]');
+      setSavedSchemeIds(localSaved.map(s => s._id || s.id || s.slug));
+    }
+  };
 
-  // Client-side text filter on top of eligible schemes
-  const filteredSchemes = schemes.filter((s) => {
-    if (!textSearch.trim()) return true;
-    const term = textSearch.toLowerCase();
-    const title = (s.scheme_name || s.title || '').toLowerCase();
-    const desc = (s.description || '').toLowerCase();
-    const dept = (s.department || '').toLowerCase();
-    return title.includes(term) || desc.includes(term) || dept.includes(term);
-  });
+  const handleToggleSave = async (scheme) => {
+    const schemeId = scheme._id || scheme.id || scheme.slug;
+
+    if (user) {
+      try {
+        const res = await axios.post('/api/bookmarks/toggle', { schemeId });
+        if (res.data.success) {
+          fetchUserBookmarks();
+        }
+      } catch (err) {
+        console.error('Bookmark error:', err);
+      }
+    } else {
+      let localSaved = JSON.parse(localStorage.getItem('suvidha_guest_saved') || '[]');
+      const index = localSaved.findIndex(s => (s._id || s.id || s.slug) === schemeId);
+      if (index > -1) {
+        localSaved.splice(index, 1);
+      } else {
+        localSaved.push(scheme);
+      }
+      localStorage.setItem('suvidha_guest_saved', JSON.stringify(localSaved));
+      setSavedSchemeIds(localSaved.map(s => s._id || s.id || s.slug));
+    }
+  };
+
+
+  const handleToggleCompare = (scheme) => {
+    const exists = compareSchemes.some(s => (s.slug || s._id) === (scheme.slug || scheme._id));
+    if (exists) {
+      setCompareSchemes(prev => prev.filter(s => (s.slug || s._id) !== (scheme.slug || scheme._id)));
+    } else {
+      if (compareSchemes.length >= 4) {
+        alert('You can compare up to 4 schemes at a time.');
+        return;
+      }
+      setCompareSchemes(prev => [...prev, scheme]);
+    }
+  };
+
+  const handleNaturalSearchSubmit = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setLoading(true);
+    try {
+      const res = await axios.post('/api/schemes/natural-search', { query: searchQuery });
+      if (res.data.schemes) {
+        setSchemes(res.data.schemes);
+      }
+    } catch (err) {
+      console.warn('Natural search fallback to basic filter:', err.message);
+      fetchRecommendations();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedState('All India');
+    setSelectedCategory('All');
+    setSelectedGender('All');
+    setIncomeInput(250000);
+    setAgeInput(25);
+    setSelectedOccupation('All');
+    fetchRecommendations();
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors">
       
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-6 rounded-3xl border border-slate-800">
-        <div>
-          <div className="flex items-center space-x-2 text-teal-400 text-xs font-bold uppercase tracking-wider mb-1">
-            <Filter className="w-4 h-4" />
-            <span>Deterministic 6-Stage Hard Filter Engine</span>
+      {/* Header Banner */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-2">
+              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Deterministic Eligibility & RAG Discovery</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-outfit">Smart Scheme Explorer</h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Filter through verified government schemes ranked strictly by your profile match score.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 font-outfit">
-            Welfare Scheme Discovery Engine
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time hard filtering with match scores sorted in <strong className="text-teal-300">Ascending Order</strong>.
-          </p>
-        </div>
 
-        <button
-          onClick={onOpenChat}
-          className="glow-btn-indigo px-5 py-3 rounded-2xl text-xs font-bold text-white flex items-center space-x-2 shrink-0 self-start md:self-auto"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Ask AI Assistant</span>
-        </button>
+          {/* Natural Language AI Search */}
+          <form onSubmit={handleNaturalSearchSubmit} className="w-full md:w-96">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('aiSearchPlaceholder')}
+                className="w-full pl-10 pr-20 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <button
+                type="submit"
+                className="absolute right-1.5 top-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                {t('searchBtn')}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      {/* Dual Panel Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Main Grid: Filters Sidebar + Scheme Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
-        {/* Left Filter Drawer (4 Cols) */}
-        <div className="lg:col-span-4 glass-panel p-6 rounded-3xl border border-slate-800 space-y-6 h-fit sticky top-28">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-            <h3 className="font-bold text-slate-100 text-sm flex items-center space-x-2">
-              <Sliders className="w-4 h-4 text-teal-400" />
-              <span>Demographic Filter Parameters</span>
+        {/* Filter Sidebar */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-6 shadow-sm h-fit">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Filter className="w-4 h-4 text-indigo-600" />
+              Demographic Filters
             </h3>
             <button
-              onClick={() => setProfile({ state: 'All India', age: 25, gender: 'All', income: 250000, category: 'General', isStudent: false, occupation: 'All' })}
-              className="text-[11px] text-slate-400 hover:text-teal-400 transition-colors"
+              onClick={clearFilters}
+              className="text-xs text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors"
             >
-              Reset
+              {t('clearFilters')}
             </button>
           </div>
 
-          {/* State Select */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">State / Territory Isolation</label>
+          {/* State Selector */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              {t('filterState')}
+            </label>
             <select
-              value={profile.state}
-              onChange={(e) => setProfile({ ...profile, state: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none"
             >
-              {INDIAN_STATES.map((st) => (
+              {indianStates.map(st => (
                 <option key={st} value={st}>{st}</option>
               ))}
             </select>
           </div>
 
-          {/* Age Slider */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <label className="font-semibold text-slate-300">Age: <span className="text-teal-400 font-bold">{profile.age} years</span></label>
-              <span className="text-[10px] text-slate-500">0 - 100 yrs</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={profile.age}
-              onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value, 10) })}
-              className="w-full accent-teal-400 bg-slate-800 h-1.5 rounded-lg cursor-pointer"
-            />
-          </div>
-
-          {/* Gender */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Gender Identity</label>
-            <div className="grid grid-cols-2 gap-2">
-              {GENDERS.map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setProfile({ ...profile, gender: g })}
-                  className={`py-2 rounded-xl text-xs font-semibold border transition-all ${
-                    profile.gender === g
-                      ? 'bg-teal-500/20 border-teal-500 text-teal-300'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Household Income Ceiling */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Annual Household Income (₹)</label>
-            <input
-              type="number"
-              value={profile.income}
-              onChange={(e) => setProfile({ ...profile, income: parseFloat(e.target.value) || 0 })}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
-              placeholder="e.g. 250000"
-            />
-          </div>
-
-          {/* Social Category */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Social Category Quota</label>
+          {/* Category Selector */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              {t('filterCategory')}
+            </label>
             <select
-              value={profile.category}
-              onChange={(e) => setProfile({ ...profile, category: e.target.value })}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none"
             >
-              {CATEGORIES.map((cat) => (
+              {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
 
-          {/* Occupation Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Occupation</label>
+          {/* Income Ceiling Range */}
+          <div>
+            <div className="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <span>{t('filterIncome')}</span>
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold">₹{Number(incomeInput).toLocaleString('en-IN')}</span>
+            </div>
             <input
-              type="text"
-              value={profile.occupation}
-              onChange={(e) => setProfile({ ...profile, occupation: e.target.value })}
-              placeholder="e.g. Farmer, Artisan, Unemployed, Student"
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+              type="range"
+              min="0"
+              max="1500000"
+              step="25000"
+              value={incomeInput}
+              onChange={(e) => setIncomeInput(e.target.value)}
+              className="w-full accent-indigo-600 cursor-pointer"
             />
           </div>
 
-          {/* Student Checkbox */}
-          <div className="flex items-center space-x-3 pt-2 border-t border-slate-800">
+          {/* Age Slider */}
+          <div>
+            <div className="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <span>{t('filterAge')}</span>
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold">{ageInput} Yrs</span>
+            </div>
             <input
-              type="checkbox"
-              id="isStudentCheck"
-              checked={profile.isStudent}
-              onChange={(e) => setProfile({ ...profile, isStudent: e.target.checked })}
-              className="w-4 h-4 accent-teal-400 bg-slate-900 border-slate-700 rounded cursor-pointer"
+              type="range"
+              min="0"
+              max="90"
+              value={ageInput}
+              onChange={(e) => setAgeInput(e.target.value)}
+              className="w-full accent-indigo-600 cursor-pointer"
             />
-            <label htmlFor="isStudentCheck" className="text-xs font-semibold text-slate-300 cursor-pointer select-none">
-              Currently Enrolled Student
+          </div>
+
+          {/* Gender Filter */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              {t('filterGender')}
             </label>
+            <select
+              value={selectedGender}
+              onChange={(e) => setSelectedGender(e.target.value)}
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none"
+            >
+              <option value="All">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Transgender">Transgender</option>
+            </select>
           </div>
 
+          <button
+            onClick={fetchRecommendations}
+            className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Apply Filters</span>
+          </button>
         </div>
 
-        {/* Right Results View (8 Cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* Top Bar Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 glass-panel p-4 rounded-2xl border border-slate-800">
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={textSearch}
-                onChange={(e) => setTextSearch(e.target.value)}
-                placeholder="Filter results..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-teal-500"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2 text-xs text-slate-400">
-              <ArrowUpDown className="w-3.5 h-3.5 text-teal-400" />
-              <span>Sorting: <strong className="text-teal-300">Ascending Match %</strong></span>
-              <span className="bg-teal-500/20 text-teal-300 text-[10px] font-bold px-2 py-0.5 rounded border border-teal-500/30">
-                {filteredSchemes.length} Eligible Schemes
-              </span>
-            </div>
-          </div>
-
-          {/* Loading State */}
-          {loading && (
-            <div className="glass-panel p-12 rounded-3xl text-center text-teal-400 space-y-3">
-              <div className="w-8 h-8 border-2 border-teal-400 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-xs font-semibold">Running 6-Stage Hard Filter Engine...</p>
-            </div>
-          )}
-
-          {/* Scheme Cards Grid */}
-          {!loading && filteredSchemes.length > 0 && (
-            <div className="space-y-4">
-              {filteredSchemes.map((scheme, idx) => {
-                const title = scheme.scheme_name || scheme.title;
-                const matchScore = scheme.match_percentage || 50;
-                const level = scheme.level || 'Central';
-                const stateName = scheme.state_name || scheme.state || 'All India';
-                const dept = scheme.department || 'Government of India';
-
-                return (
-                  <div
-                    key={idx}
-                    className="glass-panel glass-panel-hover p-6 rounded-3xl border border-slate-800 flex flex-col md:flex-row items-start justify-between gap-6 relative overflow-hidden"
-                  >
-                    <div className="space-y-3 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Match Percentage Badge (Ascending Order) */}
-                        <span className="bg-teal-500/20 text-teal-300 border border-teal-500/40 text-xs font-bold px-3 py-1 rounded-full flex items-center space-x-1 shadow-sm">
-                          <span>Match Score: {matchScore}%</span>
-                        </span>
-
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
-                          level === 'Central' ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' : 'bg-purple-500/10 text-purple-300 border-purple-500/30'
-                        }`}>
-                          {level} ({stateName})
-                        </span>
-                      </div>
-
-                      <h3 className="text-lg font-bold text-slate-100 font-outfit">{title}</h3>
-                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{scheme.description}</p>
-                      
-                      <div className="text-[11px] text-slate-500 font-medium">
-                        Department: <span className="text-slate-300">{dept}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex md:flex-col items-center gap-2 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800">
-                      <button
-                        onClick={() => setSelectedScheme(scheme)}
-                        className="glow-btn-primary px-4 py-2.5 rounded-xl text-xs font-bold text-slate-950 w-full md:w-auto text-center"
-                      >
-                        View Details & Apply
-                      </button>
-                    </div>
+        {/* Schemes Output Grid */}
+        <div className="lg:col-span-3 space-y-6">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 h-64 animate-pulse flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+                    <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                    <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded w-full" />
                   </div>
-                );
-              })}
+                  <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
+                </div>
+              ))}
             </div>
-          )}
-
-          {/* Empty State */}
-          {!loading && filteredSchemes.length === 0 && (
-            <div className="glass-panel p-12 rounded-3xl text-center space-y-4">
-              <AlertCircle className="w-12 h-12 text-slate-500 mx-auto" />
-              <h3 className="text-lg font-bold text-slate-200 font-outfit">No Matching Schemes Found</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
-                No schemes survived the hard income, age, or state isolation filters for these specific criteria. Try adjusting your demographic profile sliders.
+          ) : error ? (
+            <div className="p-8 rounded-3xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-center text-rose-800 dark:text-rose-200">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-500" />
+              <p className="text-sm font-semibold">{error}</p>
+            </div>
+          ) : schemes.length === 0 ? (
+            <div className="p-12 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3 shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 mx-auto flex items-center justify-center">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-lg">{t('noResultsTitle')}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                {t('noResultsDesc')}
               </p>
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Reset All Filters
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 px-1">
+                <span>Showing {schemes.length} verified recommendations (Sorted by Match Score)</span>
+                <span>Sorted: Highest Match First</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {schemes.map(scheme => (
+                  <SchemeCard
+                    key={scheme.slug || scheme._id || scheme.id}
+                    scheme={scheme}
+                    onExplain={(s) => setExplainScheme(s)}
+                    onToggleSave={(s) => handleToggleSave(s)}
+                    isSaved={savedSchemeIds.includes(scheme._id || scheme.id)}
+                    onToggleCompare={(s) => handleToggleCompare(s)}
+                    isComparing={compareSchemes.some(c => (c.slug || c._id) === (scheme.slug || scheme._id))}
+                  />
+                ))}
+              </div>
             </div>
           )}
-
         </div>
-
       </div>
 
-      {/* Scheme Detail Modal */}
-      {selectedScheme && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="glass-panel max-w-2xl w-full max-h-[85vh] rounded-3xl p-6 border border-teal-500/30 space-y-6 overflow-y-auto relative">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                  Match Score: {selectedScheme.match_percentage}%
-                </span>
-                <h2 className="text-xl font-bold text-slate-100 font-outfit mt-2">
-                  {selectedScheme.scheme_name || selectedScheme.title}
-                </h2>
-                <p className="text-xs text-teal-400 font-medium">
-                  {selectedScheme.department} • {selectedScheme.level} ({selectedScheme.state_name || selectedScheme.state})
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedScheme(null)}
-                className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs text-slate-300 border-t border-b border-slate-800 py-4">
-              <div>
-                <h4 className="font-bold text-slate-100 uppercase tracking-wider text-[11px] mb-1">Description</h4>
-                <p className="leading-relaxed text-slate-400">{selectedScheme.description}</p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-slate-100 uppercase tracking-wider text-[11px] mb-1">Eligibility Criteria</h4>
-                <p className="leading-relaxed text-slate-400">{selectedScheme.eligibility_text || selectedScheme.eligibilityText}</p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-slate-100 uppercase tracking-wider text-[11px] mb-1">Benefits Provided</h4>
-                <p className="leading-relaxed text-teal-300 font-semibold">{selectedScheme.benefits}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3">
-              <button
-                onClick={() => setSelectedScheme(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-              >
-                Close
-              </button>
-              <a
-                href={selectedScheme.application_url || selectedScheme.applicationUrl || '#'}
-                target="_blank"
-                rel="noreferrer"
-                className="glow-btn-primary px-5 py-2.5 rounded-xl text-xs font-bold text-slate-950 flex items-center space-x-2"
-              >
-                <span>Proceed to Official Application Portal</span>
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </div>
+      {/* Floating Comparison Drawer */}
+      {compareSchemes.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-40 bg-slate-900 text-white border border-slate-700 shadow-2xl rounded-2xl p-4 flex items-center gap-4 animate-slideUp">
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <Scale className="w-4 h-4 text-indigo-400" />
+            <span>{compareSchemes.length} Schemes Selected for Comparison</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsCompareModalOpen(true)}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-md"
+            >
+              Compare Side-by-Side
+            </button>
+            <button
+              onClick={() => setCompareSchemes([])}
+              className="text-xs text-slate-400 hover:text-white transition-colors"
+            >
+              Clear
+            </button>
           </div>
         </div>
       )}
 
+      {/* Explainable AI Modal */}
+      <ExplainableModal
+        isOpen={Boolean(explainScheme)}
+        onClose={() => setExplainScheme(null)}
+        scheme={explainScheme}
+      />
+
+      {/* Scheme Comparison Matrix Modal */}
+      <SchemeCompareModal
+        isOpen={isCompareModalOpen}
+        onClose={() => setIsCompareModalOpen(false)}
+        schemes={compareSchemes}
+      />
     </div>
   );
 }
