@@ -9,6 +9,7 @@ const GrievanceHistory = require('../models/GrievanceHistory');
 const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
 const { auth, requireRole } = require('../middleware/auth');
+const pythonService = require('../services/pythonService');
 
 // Multer Disk Storage Configuration
 const uploadDir = path.join(__dirname, '../uploads');
@@ -139,6 +140,35 @@ router.post('/check-duplicate', auth, async (req, res) => {
   }
 });
 
+// @route   POST /api/grievances/classify
+// @desc    Pre-submission AI priority classification preview (Requires Auth)
+router.post('/classify', auth, async (req, res) => {
+  try {
+    const { title, description, category, location } = req.body;
+    if (!title && !description) {
+      return res.status(400).json({ success: false, error: 'Title or description is required for classification.' });
+    }
+
+    const inputTitle = title || (description ? description.substring(0, 50) : '');
+    const inputDesc = description || '';
+    const inputCat = category || 'Other';
+
+    const aiResult = await pythonService.analyzeComplaint(inputTitle, inputDesc, inputCat, location || '');
+
+    res.json({
+      success: true,
+      category: aiResult.category,
+      subcategory: aiResult.subcategory || 'General Services',
+      priority: aiResult.priority || 'MEDIUM',
+      urgencyScore: aiResult.urgencyScore || 50,
+      department: aiResult.department || 'Department of Public Grievances',
+      reason: aiResult.nlpSummary || aiResult.departmentReason || 'Grievance analyzed by AI'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // @route   POST /api/grievances/create
 // @desc    Register a new public grievance
 router.post('/create', auth, upload.array('attachments', 5), async (req, res) => {
@@ -159,8 +189,30 @@ router.post('/create', auth, upload.array('attachments', 5), async (req, res) =>
     const parsedLat = latitude && !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : null;
     const parsedLng = longitude && !isNaN(parseFloat(longitude)) ? parseFloat(longitude) : null;
 
-    const assignedDept = department || aiDepartment || 'Department of Revenue & Public Grievances';
-    const assignedPriority = priority || aiPriority || 'MEDIUM';
+    let finalAiCategory = aiCategory;
+    let finalAiPriority = aiPriority;
+    let finalAiDepartment = aiDepartment;
+    let finalAiReason = aiReason;
+    let finalUrgencyScore = urgencyScore;
+
+    if (!finalAiPriority || !finalUrgencyScore) {
+      try {
+        const inputTitle = subject || (description ? description.substring(0, 50) : '');
+        const aiResult = await pythonService.analyzeComplaint(inputTitle, description || '', category || 'Other', address || '');
+        if (aiResult) {
+          finalAiCategory = aiResult.category || finalAiCategory;
+          finalAiPriority = aiResult.priority || finalAiPriority;
+          finalAiDepartment = aiResult.department || finalAiDepartment;
+          finalAiReason = aiResult.nlpSummary || aiResult.departmentReason || finalAiReason;
+          finalUrgencyScore = aiResult.urgencyScore || finalUrgencyScore;
+        }
+      } catch (aiErr) {
+        console.warn('[AI Autotriage Warning] Failed to dynamically classify complaint:', aiErr.message);
+      }
+    }
+
+    const assignedDept = department || finalAiDepartment || 'Department of Revenue & Public Grievances';
+    const assignedPriority = priority || finalAiPriority || 'MEDIUM';
 
     const newGrievance = new Grievance({
       referenceNumber: refNumber,
@@ -180,11 +232,11 @@ router.post('/create', auth, upload.array('attachments', 5), async (req, res) =>
       longitude: parsedLng,
       attachments: attachmentPaths,
       priority: assignedPriority,
-      aiCategory: aiCategory || category,
-      aiPriority: aiPriority || assignedPriority,
-      aiDepartment: aiDepartment || assignedDept,
-      aiReason: aiReason || '',
-      urgencyScore: urgencyScore ? Number(urgencyScore) : 50,
+      aiCategory: finalAiCategory || category,
+      aiPriority: finalAiPriority || assignedPriority,
+      aiDepartment: finalAiDepartment || assignedDept,
+      aiReason: finalAiReason || '',
+      urgencyScore: finalUrgencyScore ? Number(finalUrgencyScore) : 50,
       finalCategory: category,
       finalPriority: assignedPriority,
       status: 'SUBMITTED',
