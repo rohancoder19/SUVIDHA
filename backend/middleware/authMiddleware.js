@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 
+
 const JWT_SECRET = process.env.JWT_SECRET || 'civic_welfare_secret_key_2026';
 
 const protect = (req, res, next) => {
