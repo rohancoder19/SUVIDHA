@@ -2,31 +2,48 @@ const pythonService = require('../services/pythonService');
 
 const handleChat = async (req, res) => {
   try {
-    const { message, conversationHistory, userProfile } = req.body;
-    if (!message || typeof message !== 'string' || !message.trim()) {
+    const { message, query, conversationHistory, userProfile } = req.body;
+    const cleanMessage = (message || query || '').trim();
+    if (!cleanMessage) {
       return res.status(400).json({ success: false, message: 'Message text is required and cannot be empty' });
     }
 
+    // Extract flat profile from auth session or request body
+    let profile = null;
+    if (req.user && req.user.profile) {
+      profile = req.user.profile;
+    } else if (userProfile) {
+      profile = userProfile.profile || userProfile;
+    }
+
     const response = await pythonService.queryChatbot(
-      message.trim(),
+      cleanMessage,
       Array.isArray(conversationHistory) ? conversationHistory : [],
-      userProfile || null
+      profile
     );
+
+    const replyText = response.reply || "AI Assistant is temporarily unavailable. Please try again.";
+    const sourcesList = response.sources || [];
 
     return res.json({
       success: true,
-      reply: response.reply || "AI Assistant is temporarily unavailable. Please try again.",
+      reply: replyText,
+      answer: replyText, // Dual support for RAGChatbotModal
       source: response.source || "Civic Assistant Service",
-      sources: response.sources || [],
-      suggestedActions: Array.isArray(response.suggestedActions) ? response.suggestedActions : []
+      sources: sourcesList,
+      cited_schemes: sourcesList, // Dual support for RAGChatbotModal
+      suggestedActions: Array.isArray(response.suggestedActions) ? response.suggestedActions : ["Find Schemes", "File Complaint", "Track Grievances"]
     });
   } catch (error) {
     console.error('[CHATBOT ERROR]', error.message);
+    const fallbackText = "AI Assistant is temporarily unavailable. Please try again.";
     return res.status(500).json({
       success: false,
-      reply: "AI Assistant is temporarily unavailable. Please try again.",
+      reply: fallbackText,
+      answer: fallbackText,
       source: "Civic Assistant Service",
       sources: [],
+      cited_schemes: [],
       suggestedActions: ["Find Schemes", "File Complaint", "Track Grievances"]
     });
   }

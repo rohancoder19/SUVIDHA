@@ -11,7 +11,7 @@ cd ..
 
 echo.
 echo 2. Starting Python ML Engine 2.0 (Port 8000)...
-start "SUVIDHA ML Engine" cmd /k "cd ml_service && python -m uvicorn main:app --host 127.0.0.1 --port 8000"
+start "SUVIDHA ML Engine" cmd /k "cd ml_service && python -m uvicorn api:app --host 127.0.0.1 --port 8000"
 
 echo.
 echo 3. Starting Express Backend API (Port 5000)...

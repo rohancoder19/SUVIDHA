@@ -11,6 +11,7 @@ sys.path.append(os.path.dirname(__file__))
 from prediction.eligibility import eligibility_predictor
 from prediction.complaint_priority import complaint_classifier
 from prediction.chatbot import generate_chatbot_response
+from rag.rag_engine import rag_engine
 from ingestion.ingest import SchemeIngestionPipeline, DOCUMENTS_DIR
 pipeline = SchemeIngestionPipeline()
 from train_models import train_and_save_models
