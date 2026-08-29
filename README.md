@@ -68,7 +68,7 @@ SUVIDHA 2.0 provides an **AI-driven scheme matching engine**, a **natural langua
 * **File Uploads:** Multer (local disk storage)
 
 ### ML & AI Microservice
-* **Framework:** Python FastAPI (Uvicorn server)
+* **Framework:** Python FastAPI (Uvicorn server) ( Data Validation and  Backend )
 * **Vector Database:** ChromaDB
 * **LLM Engine:** Google Gemini API (`text-embedding-004` & `gemini-1.5-flash`)
 * **Data Processing:** Pandas, Pydantic, python-dotenv
