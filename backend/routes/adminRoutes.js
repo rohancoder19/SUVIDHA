@@ -4,9 +4,9 @@ const { getAllComplaints, updateComplaintStatus, overrideAIDecision, getAdminAna
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 
-router.get('/complaints', protect, authorizeRoles('Admin', 'Officer'), getAllComplaints);
-router.put('/complaints/:id/status', protect, authorizeRoles('Admin', 'Officer'), updateComplaintStatus);
-router.put('/complaints/:id/decision', protect, authorizeRoles('Admin', 'Officer'), overrideAIDecision);
+router.get('/complaints', protect, authorizeRoles('Admin', 'Officer'), getAllComplaints); //getAPI
+router.put('/complaints/:id/status', protect, authorizeRoles('Admin', 'Officer'), updateComplaintStatus); // put API
+router.put('/complaints/:id/decision', protect, authorizeRoles('Admin', 'Officer'), overrideAIDecision);// put API
 router.get('/analytics', protect, authorizeRoles('Admin', 'Officer'), getAdminAnalytics);
 
 module.exports = router;
